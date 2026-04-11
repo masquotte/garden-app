@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Garden — Focus Timer</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Nunito:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app-wrap">
+<header>
+  <div class="logo">Garden</div>
+  <div style="display:flex; align-items:center; gap:10px;">
+    <button class="btn-shop" id="shopBtn">🌿 New plants</button>
+    <button class="theme-toggle" id="themeToggle" title="Theme">🌙</button>
+    <button class="theme-toggle" id="settingsBtn" title="Settings">⚙️</button>
+    <div class="coin-badge" id="coinBadge">
+      <span class="coin-icon">🪙</span>
+      <span id="coinDisplay">0</span>
+    </div>
+  </div>
+</header>
+
+<div class="content-row">
+
+  <!-- ── TIMER CARD ── -->
+  <div class="card card-timer">
+
+    <div class="state-setup">
+      <!-- Dial -->
+      <svg class="dial-svg" id="dialSvg" width="200" height="220" viewBox="0 0 200 220">
+        <defs>
+          <filter id="circle-blur" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="6"/>
+          </filter>
+        </defs>
+        <path class="dial-track" id="dialTrack"
+              d="M 30.7 140 A 80 80 0 1 1 169.3 140"
+              fill="none" stroke-width="9"/>
+        <path class="dial-progress" id="dialProgress"
+              d="" fill="none" stroke-width="9"/>
+        <text class="dial-label" x="22" y="158" text-anchor="middle">10</text>
+        <text class="dial-label" x="178" y="158" text-anchor="middle">120</text>
+        <circle cx="100" cy="100" r="60" fill="var(--panel)" opacity="0.9" filter="url(#circle-blur)"/>
+        <image id="dialPlant" href="sprites/cedar-1.png" x="64" y="48" width="72" height="96"/>
+        <text class="dial-value-text" id="dialValueText" x="100" y="210" text-anchor="middle">25 min</text>
+        <circle class="dial-handle" id="dialHandle" cx="30.7" cy="140" r="10"/>
+        <!-- Transparent click zone over the tree -->
+        <circle id="dialTreeBtn" cx="100" cy="90" r="48" fill="transparent" style="cursor:pointer;"/>
+      </svg>
+      <div class="dial-hint">tap tree to choose plant</div>
+
+      <hr class="divider">
+
+      <div class="section-label">Recent plants</div>
+      <div class="plant-preview" id="recentPlants"></div>
+
+      <div class="section-label" style="margin-top:16px;">Session tag</div>
+      <div class="tags">
+        <button class="tag-btn active" data-tag="Work">💼 Work</button>
+        <button class="tag-btn" data-tag="Study">📚 Study</button>
+        <button class="tag-btn" data-tag="Social">💬 Social</button>
+        <button class="tag-btn" data-tag="Rest">🛋️ Rest</button>
+        <button class="tag-btn" data-tag="Entertainment">🎮 Fun</button>
+        <button class="tag-btn" data-tag="Sport">🏃 Sport</button>
+        <button class="tag-btn" data-tag="Other">✨ Other</button>
+      </div>
+
+      <hr class="divider">
+
+      <div class="btn-row">
+        <button class="btn btn-start" id="startBtn">🌱 Plant &amp; Focus</button>
+      </div>
+    </div><!-- /state-setup -->
+
+    <!-- Running state -->
+    <div class="state-running">
+      <div class="timer-face">
+        <div class="ring-wrap">
+          <svg width="180" height="180">
+            <circle class="ring-bg" cx="90" cy="90" r="78" fill="none" stroke-width="8"/>
+            <circle class="ring-progress" id="ringProgress" cx="90" cy="90" r="78"
+                    fill="none" stroke-width="8"
+                    stroke-dasharray="490"
+                    stroke-dashoffset="0"/>
+          </svg>
+          <div class="ring-inner">
+            <div class="countdown" id="countdown">25:00</div>
+            <div class="tag-indicator" id="runningTag">Work</div>
+          </div>
+        </div>
+      </div>
+      <div class="quote-box" id="quoteBox">
+        <div class="quote-text" id="quoteText"></div>
+        <div class="quote-author" id="quoteAuthor"></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-cancel" id="cancelBtn">✕ Give up anyway</button>
+      </div>
+    </div><!-- /state-running -->
+
+  </div><!-- /card-timer -->
+
+  <!-- ── GARDEN CARD ── -->
+  <div class="card card-garden">
+    <div class="garden-header">
+      <div class="section-label" style="margin:0">Your Garden</div>
+      <div class="garden-date" id="gardenDate"></div>
+      <div class="session-count" id="sessionCount"></div>
+    </div>
+    <div class="effect-layer" id="effectLayer"></div>
+    <div class="grid" id="gardenGrid"></div>
+  </div>
+
+</div><!-- /content-row -->
+
+<!-- ═══ STATISTICS ═══ -->
+<div class="stats-section-wrap">
+    <div class="card card-stats" style="padding: 14px 28px;">
+    <div class="stats-header-row">
+      <div style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:4px 0;" onclick="toggleStats()">
+        <div class="section-label" style="margin:0">📊 Statistics</div>
+        <span id="statsToggleArrow" style="font-size:0.75rem;color:var(--muted);transition:transform 0.3s;">▲</span>
+      </div>
+      <div class="stats-streak" id="statsStreak"></div>
+    </div>
+    <div class="stats-collapsible" id="statsCollapsible">
+    <div class="stats-tabs">
+      <button class="stats-tab active" data-period="day" onclick="switchStatsPeriod('day')">Day</button>
+      <button class="stats-tab" data-period="week" onclick="switchStatsPeriod('week')">Week</button>
+      <button class="stats-tab" data-period="month" onclick="switchStatsPeriod('month')">Month</button>
+      <button class="stats-tab" data-period="year" onclick="switchStatsPeriod('year')">Year</button>
+    </div>
+    <div id="statsContent"></div>
+  </div>
+</div>
+
+</div><!-- /app-wrap -->
+
+<!-- ═══ PLANT PICKER POPUP ═══ -->
+<div class="popup-overlay" id="plantPickerOverlay">
+  <div class="popup popup-planner">
+    <div class="popup-header">
+      <div class="section-label" style="margin:0;font-size:0.8rem;">Planting Settings</div>
+      <button class="theme-toggle" id="plantPickerClose">✕</button>
+    </div>
+    <hr class="divider">
+    <div class="section-label">Plant</div>
+    <div class="picker-grid" id="pickerGrid"></div>
+    <hr class="divider">
+    <div class="picker-time-row">
+      <div class="section-label" style="margin:0">Focus time</div>
+      <div class="time-stepper">
+        <button class="time-btn" id="timeDown">−</button>
+        <span id="pickerTimeVal">25 min</span>
+        <button class="time-btn" id="timeUp">+</button>
+      </div>
+    </div>
+    <hr class="divider">
+    <div class="section-label">Tag</div>
+    <div class="tags" id="pickerTagsRow"></div>
+    <hr class="divider">
+    <div style="display:flex;justify-content:flex-end;">
+      <button class="btn-shop" id="plantPickerStart">🌱 Plant</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SHOP POPUP ═══ -->
+<div class="popup-overlay" id="shopOverlay">
+  <div class="popup popup-wide">
+    <div class="popup-header">
+      <div class="logo" style="font-size:1.2rem;">🌿 Shop</div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="coin-badge">
+          <span class="coin-icon">🪙</span>
+          <span id="shopCoinDisplay">0</span>
+        </div>
+        <button class="theme-toggle" id="shopClose">✕</button>
+      </div>
+    </div>
+    <hr class="divider">
+    <div class="shop-tabs">
+      <button class="shop-tab active" id="tabTrees" onclick="switchShopTab('trees')">Trees</button>
+      <button class="shop-tab" id="tabLand" onclick="switchShopTab('land')">Land</button>
+    </div>
+    <div class="shop-grid" id="shopGrid"></div>
+  </div>
+</div>
+
+<!-- ═══ SETTINGS POPUP ═══ -->
+<div class="popup-overlay" id="popupOverlay">
+  <div class="popup">
+    <div class="popup-header">
+      <div class="logo" style="font-size:1.2rem;">⚙️ Settings</div>
+      <button class="theme-toggle" id="popupClose">✕</button>
+    </div>
+    <hr class="divider">
+    <div class="section-label">Data</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn-pill-primary" id="exportBtn">⬇ Get my data</button>
+      <label class="btn-pill" style="cursor:pointer;">
+        ⬆ Upload data
+        <input type="file" id="importFile" accept=".json" style="display:none;">
+      </label>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ TOAST ═══ -->
+<div class="toast" id="toast"></div>
+
+<script src="trees.js"></script>
+<script src="lands.js"></script>
+<script src="quotes.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
