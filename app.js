@@ -81,14 +81,19 @@ function migrate(saved) {
   if (!saved.activeLand)    saved.activeLand    = saved.activeSoil || 'grass';
   if (!saved.unlocked)      saved.unlocked      = { trees: getDefaultUnlocked(), lands: getDefaultUnlockedLands() };
   if (!saved.unlocked.lands) saved.unlocked.lands = saved.unlocked.soils || getDefaultUnlockedLands();
-  // clean up old keys
   delete saved.activeSoil;
   delete saved.unlocked.soils;
   return saved;
 }
 
+// FIX 3: saveState обёрнут в try/catch
 function saveState() {
-  localStorage.setItem('forest_v3', JSON.stringify(state));
+  try {
+    localStorage.setItem('forest_v3', JSON.stringify(state));
+  } catch(e) {
+    console.warn('Save error — storage may be full or unavailable', e);
+    showToast('⚠️ Could not save progress');
+  }
 }
 
 /* ════════════════════════════════════════
@@ -164,6 +169,7 @@ dialSvg.addEventListener('pointerdown', e => {
   isDragging = true;
   dialSvg.setPointerCapture(e.pointerId);
   updateDial(ptrToValue(e.clientX, e.clientY));
+  e.preventDefault(); // FIX: предотвращает scroll на мобильных
 });
 dialSvg.addEventListener('pointermove', e => {
   if (isDragging) updateDial(ptrToValue(e.clientX, e.clientY));
@@ -173,6 +179,25 @@ dialSvg.addEventListener('pointerup', () => { isDragging = false; });
 const dialTreeBtn = document.getElementById('dialTreeBtn');
 dialTreeBtn.addEventListener('pointerdown', e => { e.stopPropagation(); });
 dialTreeBtn.addEventListener('click', () => { openPlantPicker(); });
+
+/* ════════════════════════════════════════
+   ТЕГИ — рендер из единого источника
+   ════════════════════════════════════════ */
+// FIX 1: теги рендерятся из TAGS, не из захардкоженного HTML
+function renderTagRow(containerId, activeTag, onSelect) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = TAGS.map(({ tag, emoji }) =>
+    `<button class="tag-btn ${tag === activeTag ? 'active' : ''}" data-tag="${tag}">
+      ${emoji} ${tag === 'Entertainment' ? 'Fun' : tag}
+    </button>`
+  ).join('');
+  container.addEventListener('click', e => {
+    const btn = e.target.closest('[data-tag]');
+    if (!btn) return;
+    onSelect(btn.dataset.tag);
+  });
+}
 
 /* ════════════════════════════════════════
    RECENT PLANTS
@@ -189,16 +214,23 @@ function renderRecentPlants() {
   }
   recent = recent.slice(0, 3);
 
+  // FIX 5: data-атрибут вместо onclick= в строке
   container.innerHTML = recent.map(type => {
     const tree = TREES[type];
     if (!tree) return '';
     const isActive = type === activePlantType;
-    return `<button class="plant-opt ${isActive ? 'active' : ''}" onclick="selectPlant('${type}')">
+    return `<button class="plant-opt ${isActive ? 'active' : ''}" data-plant="${type}">
       <img src="sprites/${type}-2.png" alt="${tree.name}"
            onerror="this.src='sprites/cedar-2.png'">
       <span>${tree.name}</span>
     </button>`;
   }).join('');
+
+  container.addEventListener('click', e => {
+    const btn = e.target.closest('[data-plant]');
+    if (!btn) return;
+    selectPlant(btn.dataset.plant);
+  });
 }
 
 function selectPlant(type) {
@@ -228,19 +260,30 @@ function closePlantPicker() {
 
 function renderPickerGrid() {
   const grid = document.getElementById('pickerGrid');
+
+  // FIX 5: data-атрибут вместо onclick= в строке
   grid.innerHTML = Object.entries(TREES).map(([key, tree]) => {
     const owned      = state.unlocked.trees.includes(key);
     const isSelected = key === activePlantType;
     const price      = !owned ? `<div class="picker-card-price">🪙 ${tree.price}</div>` : '';
     return `
       <div class="picker-card ${isSelected ? 'selected' : ''} ${!owned ? 'locked' : ''}"
-           onclick="${owned ? `pickerSelectPlant('${key}')` : `showToast('Buy in shop first')`}">
+           data-plant-key="${key}" data-owned="${owned}">
         <img src="sprites/${key}-2.png" alt="${tree.name}"
              onerror="this.src='sprites/cedar-2.png'">
         <span class="picker-card-name">${tree.name}</span>
         ${price}
       </div>`;
   }).join('');
+
+  grid.addEventListener('click', e => {
+    const card = e.target.closest('[data-plant-key]');
+    if (!card) return;
+    const key   = card.dataset.plantKey;
+    const owned = card.dataset.owned === 'true';
+    if (owned) pickerSelectPlant(key);
+    else showToast('Buy in shop first');
+  });
 }
 
 function pickerSelectPlant(type) {
@@ -251,25 +294,14 @@ function pickerSelectPlant(type) {
 }
 
 function renderPickerTags() {
-  const container = document.getElementById('pickerTagsRow');
-  const tags = [
-    {tag:'Work',emoji:'💼'},{tag:'Study',emoji:'📚'},
-    {tag:'Social',emoji:'💬'},{tag:'Rest',emoji:'🛋️'},
-    {tag:'Entertainment',emoji:'🎮'},{tag:'Sport',emoji:'🏃'},
-    {tag:'Other',emoji:'✨'}
-  ];
-  container.innerHTML = tags.map(({tag, emoji}) =>
-    `<button class="tag-btn ${tag === pickerTag ? 'active' : ''}"
-             onclick="pickerSelectTag('${tag}')">${emoji} ${tag}</button>`
-  ).join('');
-}
-
-function pickerSelectTag(tag) {
-  pickerTag  = tag;
-  activeTag  = tag;
-  document.querySelectorAll('[data-tag]').forEach(b =>
-    b.classList.toggle('active', b.dataset.tag === tag));
-  renderPickerTags();
+  renderTagRow('pickerTagsRow', pickerTag, tag => {
+    pickerTag = tag;
+    activeTag = tag;
+    // синхронизируем главную панель тегов
+    document.querySelectorAll('#mainTagsRow [data-tag]').forEach(b =>
+      b.classList.toggle('active', b.dataset.tag === tag));
+    renderPickerTags();
+  });
 }
 
 document.getElementById('plantPickerClose').addEventListener('click', closePlantPicker);
@@ -303,8 +335,10 @@ let totalSeconds = 0, remainingSeconds = 0;
 let activeTag = 'Work';
 let sessionStartedAt = null;
 let sessionStartDate = null;
+let isRunning = false; // FIX 2: флаг защиты от двойного запуска
 
-const CIRCUMFERENCE = 2 * Math.PI * 78;
+const RING_RADIUS = 78; // единственный источник правды для радиуса кольца
+const CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
 const startBtn     = document.getElementById('startBtn');
 const cancelBtn    = document.getElementById('cancelBtn');
@@ -316,21 +350,27 @@ const coinBadge    = document.getElementById('coinBadge');
 const gardenGrid   = document.getElementById('gardenGrid');
 const sessionCount = document.getElementById('sessionCount');
 const toast        = document.getElementById('toast');
-const tagBtns      = document.querySelectorAll('.tag-btn');
 
-tagBtns.forEach(btn => btn.addEventListener('click', () => {
-  tagBtns.forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  activeTag = btn.dataset.tag;
-}));
+// FIX 1: главная панель тегов рендерится из TAGS
+function initMainTags() {
+  renderTagRow('mainTagsRow', activeTag, tag => {
+    activeTag = tag;
+    // синхронизируем пикер если открыт
+    pickerTag = tag;
+  });
+}
 
 startBtn.addEventListener('click', () => {
-  activeTag = document.querySelector('[data-tag].active')?.dataset.tag || 'Work';
+  if (isRunning) return; // FIX 2: защита от двойного запуска
   addToRecentPlants(activePlantType);
   startSession();
 });
 
 function startSession() {
+  if (isRunning) return; // FIX 2: двойная защита
+  isRunning = true;
+  startBtn.disabled = true; // FIX 2: блокируем кнопку
+
   setStatsCollapsed(true);
   sessionStartedAt = Date.now();
   sessionStartDate = getToday();
@@ -354,25 +394,35 @@ function startSession() {
 }
 
 cancelBtn.addEventListener('click', () => {
-  clearInterval(timerInterval);
-  document.body.classList.remove('running');
-  setStatsCollapsed(false);
-  const idx = addToGrid(activePlantType, getStage(dialValue), true, sessionStartDate);
-  recordSession(dialValue, false);
-  if (idx >= 0) { saveState(); renderGarden(idx); }
-  showToast('🍂 Plant withered');
+  endSession(false); // FIX: единая функция завершения
 });
 
-function finishSession(minutes, completed) {
+// FIX: единая функция завершения сессии вместо дублирования в cancelBtn и finishSession
+function endSession(completed) {
+  clearInterval(timerInterval);
+  isRunning = false;         // FIX 2: сбрасываем флаг
+  startBtn.disabled = false; // FIX 2: разблокируем кнопку
   document.body.classList.remove('running');
-  const earned = completed ? calcCoins(minutes) : 0;
+
+  const earned = completed ? calcCoins(dialValue) : 0;
   if (earned > 0) state.coins += earned;
-  const idx = addToGrid(activePlantType, getStage(minutes), !completed);
-  recordSession(minutes, completed, earned);
+
+  const idx = addToGrid(activePlantType, getStage(dialValue), !completed, sessionStartDate);
+  recordSession(dialValue, completed, earned);
   saveState();
   renderCoins(completed);
   renderGarden(idx);
-  if (completed) showToast(`🌳 Tree planted! +${earned} 🍃`);
+
+  if (completed) {
+    showToast(`🌳 Tree planted! +${earned} 🍃`);
+  } else {
+    setStatsCollapsed(false);
+    showToast('🍂 Plant withered');
+  }
+}
+
+function finishSession(minutes, completed) {
+  endSession(completed);
 }
 
 function recordSession(minutes, completed, earned = 0) {
@@ -442,7 +492,7 @@ function renderEffect() {
     <div style="position:absolute;border-radius:50%;background:rgba(255,255,255,0.65);
       width:34px;height:34px;top:-15px;left:52px;"></div>
   </div>`;
-        
+
   } else if (type === 'stars') {
     const stars = [
       {s:2, t:'12%', l:'15%', a:'twinkle1', d:'0s',    dur:'5.2s'},
@@ -467,79 +517,108 @@ function renderEffect() {
   }
 }
 
-function renderGarden(newIdx = -1) {
-  const HW=44, HH=22, D=11, GCX=230, GCY=160, SW=90, SH=115;
-  const grid = getTodayGrid();
-
-  const dateEl = document.getElementById('gardenDate');
-  if (dateEl) {
-    const d = new Date();
-    dateEl.textContent = `Today — ${d.getDate()} ${d.toLocaleString('en', {month:'long'})} ${d.getFullYear()}`;
-  }
-
-  const alive = grid.filter(c => c && !c.dead).length;
-  const dead  = grid.filter(c => c && c.dead).length;
-  sessionCount.innerHTML = `<span>🌿 ${alive}</span> <span style="opacity:0.5">🍂 ${dead}</span>`;
-
-  const activeLand = state.activeLand || 'grass';
-
-  const cells = [];
-  for (let r=0; r<GRID_COLS; r++)
-    for (let c=0; c<GRID_COLS; c++)
-      cells.push({r, c, idx: r*GRID_COLS+c});
-  cells.sort((a,b) => (a.r+a.c) - (b.r+b.c));
-
+/* ════════════════════════════════════════
+   GARDEN — разбит на функции (FIX 4)
+   ════════════════════════════════════════ */
+function buildGardenDefs(cells) {
+  const HW = 44, HH = 22, GCX = 230, GCY = 160;
   let defs = `<defs>
     <filter id="shadow-blur" x="-80%" y="-80%" width="260%" height="260%">
       <feGaussianBlur stdDeviation="3"/>
     </filter>`;
-  for (const {r, c, idx} of cells) {
-    const cx = GCX + (c-r)*HW, cy = GCY + (r+c)*HH;
-    const tp={x:cx,y:cy-HH}, rp={x:cx+HW,y:cy}, bp={x:cx,y:cy+HH}, lp={x:cx-HW,y:cy};
+  for (const { r, c, idx } of cells) {
+    const cx = GCX + (c - r) * HW, cy = GCY + (r + c) * HH;
+    const tp = { x: cx, y: cy - HH }, rp = { x: cx + HW, y: cy },
+          bp = { x: cx, y: cy + HH }, lp = { x: cx - HW, y: cy };
     defs += `<clipPath id="clip-${idx}">
       <polygon points="${tp.x},${tp.y} ${rp.x},${rp.y} ${bp.x},${bp.y} ${lp.x},${lp.y}"/>
     </clipPath>`;
   }
   defs += `</defs>`;
+  return defs;
+}
 
-  let s = `<svg width="100%" viewBox="0 0 460 380" xmlns="http://www.w3.org/2000/svg">${defs}`;
-  const sprites = [];
-
-  for (const {r, c, idx} of cells) {
-    const cx = GCX + (c-r)*HW, cy = GCY + (r+c)*HH;
-    const tp={x:cx,y:cy-HH}, rp={x:cx+HW,y:cy}, bp={x:cx,y:cy+HH}, lp={x:cx-HW,y:cy};
-    const plant = grid[idx];
-
-    s += `<image href="land/${activeLand}.png"
-            x="${cx-HW}" y="${cy-HH}" width="${HW*2}" height="${HH*2}"
-            clip-path="url(#clip-${idx})"
-            preserveAspectRatio="xMidYMid slice"/>`;
-    s += `<polygon points="${rp.x},${rp.y} ${bp.x},${bp.y} ${bp.x},${bp.y+D} ${rp.x},${rp.y+D}"
-            fill="#3a6128"/>`;
-    s += `<polygon points="${lp.x},${lp.y} ${bp.x},${bp.y} ${bp.x},${bp.y+D} ${lp.x},${lp.y+D}"
-            fill="#2a4a1c"/>`;
-    if (plant) sprites.push({idx, cx, cy, plant});
+function buildGardenTiles(cells, grid, activeLand) {
+  const HW = 44, HH = 22, D = 11, GCX = 230, GCY = 160;
+  const parts = [];
+  for (const { r, c, idx } of cells) {
+    const cx = GCX + (c - r) * HW, cy = GCY + (r + c) * HH;
+    const rp = { x: cx + HW, y: cy }, bp = { x: cx, y: cy + HH }, lp = { x: cx - HW, y: cy };
+    parts.push(
+      `<image href="land/${activeLand}.png"
+        x="${cx - HW}" y="${cy - HH}" width="${HW * 2}" height="${HH * 2}"
+        clip-path="url(#clip-${idx})"
+        preserveAspectRatio="xMidYMid slice"/>`,
+      `<polygon points="${rp.x},${rp.y} ${bp.x},${bp.y} ${bp.x},${bp.y + D} ${rp.x},${rp.y + D}"
+        fill="#3a6128"/>`,
+      `<polygon points="${lp.x},${lp.y} ${bp.x},${bp.y} ${bp.x},${bp.y + D} ${lp.x},${lp.y + D}"
+        fill="#2a4a1c"/>`
+    );
   }
+  return parts.join('');
+}
 
-  sprites.sort((a,b) =>
-    (Math.floor(a.idx/GRID_COLS)+a.idx%GRID_COLS) -
-    (Math.floor(b.idx/GRID_COLS)+b.idx%GRID_COLS));
+function buildGardenSprites(cells, grid, newIdx) {
+  const HW = 44, HH = 22, GCX = 230, GCY = 160, SW = 90, SH = 115;
+  const sprites = [];
+  for (const { r, c, idx } of cells) {
+    const plant = grid[idx];
+    if (!plant) continue;
+    const cx = GCX + (c - r) * HW, cy = GCY + (r + c) * HH;
+    sprites.push({ idx, cx, cy, plant });
+  }
+  sprites.sort((a, b) =>
+    (Math.floor(a.idx / GRID_COLS) + a.idx % GRID_COLS) -
+    (Math.floor(b.idx / GRID_COLS) + b.idx % GRID_COLS));
 
-  for (const {idx, cx, cy, plant} of sprites) {
-    const imgX = cx - SW/2;
+  return sprites.map(({ idx, cx, cy, plant }) => {
+    const imgX = cx - SW / 2;
     const imgY = cy - SH;
     const cls  = idx === newIdx ? 'new-tree' : '';
     const href = plant.dead
       ? `sprites/wilted-${plant.stage}.png`
       : `sprites/${plant.type}-${plant.stage}.png`;
-    s += `<ellipse cx="${cx}" cy="${cy}" rx="16" ry="4"
-            fill="rgba(0,0,0,0.35)" filter="url(#shadow-blur)"/>`;
-    s += `<image href="${href}" x="${imgX}" y="${imgY}"
-            width="${SW}" height="${SH}" class="${cls}"/>`;
-  }
+    return [
+      `<ellipse cx="${cx}" cy="${cy}" rx="16" ry="4"
+        fill="rgba(0,0,0,0.35)" filter="url(#shadow-blur)"/>`,
+      `<image href="${href}" x="${imgX}" y="${imgY}"
+        width="${SW}" height="${SH}" class="${cls}"/>`
+    ].join('');
+  }).join('');
+}
 
-  s += `</svg>`;
-  gardenGrid.innerHTML = s;
+function renderGardenStats(grid) {
+  const dateEl = document.getElementById('gardenDate');
+  if (dateEl) {
+    const d = new Date();
+    dateEl.textContent = `Today — ${d.getDate()} ${d.toLocaleString('en', { month: 'long' })} ${d.getFullYear()}`;
+  }
+  const alive = grid.filter(c => c && !c.dead).length;
+  const dead  = grid.filter(c => c && c.dead).length;
+  sessionCount.innerHTML = `<span>🌿 ${alive}</span> <span style="opacity:0.5">🍂 ${dead}</span>`;
+}
+
+function renderGarden(newIdx = -1) {
+  const grid       = getTodayGrid();
+  const activeLand = state.activeLand || 'grass';
+
+  const cells = [];
+  for (let r = 0; r < GRID_COLS; r++)
+    for (let c = 0; c < GRID_COLS; c++)
+      cells.push({ r, c, idx: r * GRID_COLS + c });
+  cells.sort((a, b) => (a.r + a.c) - (b.r + b.c));
+
+  // FIX 4: array.join вместо конкатенации строк в цикле
+  const svg = [
+    `<svg width="100%" viewBox="0 0 460 380" xmlns="http://www.w3.org/2000/svg">`,
+    buildGardenDefs(cells),
+    buildGardenTiles(cells, grid, activeLand),
+    buildGardenSprites(cells, grid, newIdx),
+    `</svg>`
+  ].join('');
+
+  gardenGrid.innerHTML = svg;
+  renderGardenStats(grid);
   renderEffect();
 }
 
@@ -586,6 +665,8 @@ function switchShopTab(tab) {
 
 function renderShop() {
   shopCoinDisplay.textContent = state.coins;
+
+  // FIX 5: data-атрибут вместо onclick= в строке
   shopGrid.innerHTML = Object.entries(TREES).map(([key, tree]) => {
     const owned     = state.unlocked.trees.includes(key);
     const canAfford = state.coins >= tree.price;
@@ -594,7 +675,7 @@ function renderShop() {
       ? `<span class="shop-unlocked">Unlocked</span>`
       : `<div class="shop-price"><span>🪙</span>${tree.price}</div>`;
     return `
-      <div class="shop-card ${cls}" onclick="buyTree('${key}')">
+      <div class="shop-card ${cls}" data-tree-key="${key}">
         <div class="shop-img">
           <img src="sprites/${key}-2.png" alt="${tree.name}"
                onerror="this.parentElement.innerHTML='<div class=shop-placeholder></div>'">
@@ -605,10 +686,18 @@ function renderShop() {
         </div>
       </div>`;
   }).join('');
+
+  shopGrid.addEventListener('click', e => {
+    const card = e.target.closest('[data-tree-key]');
+    if (!card) return;
+    buyTree(card.dataset.treeKey);
+  });
 }
 
 function renderLandShop() {
   shopCoinDisplay.textContent = state.coins;
+
+  // FIX 5: data-атрибут вместо onclick= в строке
   shopGrid.innerHTML = Object.entries(LANDS).map(([key, land]) => {
     const owned     = (state.unlocked.lands || []).includes(key);
     const canAfford = state.coins >= land.price;
@@ -618,7 +707,7 @@ function renderLandShop() {
       ? `<span class="shop-unlocked">${isActive ? 'Active' : 'Unlocked'}</span>`
       : `<div class="shop-price"><span>🪙</span>${land.price}</div>`;
     return `
-      <div class="shop-card ${cls}" onclick="buyLand('${key}')">
+      <div class="shop-card ${cls}" data-land-key="${key}">
         <div class="shop-img">
           <img src="land/${key}.png" alt="${land.name}"
                onerror="this.parentElement.innerHTML='<div class=shop-placeholder></div>'">
@@ -629,6 +718,12 @@ function renderLandShop() {
         </div>
       </div>`;
   }).join('');
+
+  shopGrid.addEventListener('click', e => {
+    const card = e.target.closest('[data-land-key]');
+    if (!card) return;
+    buyLand(card.dataset.landKey);
+  });
 }
 
 function buyTree(key) {
@@ -854,34 +949,37 @@ function svgBarChart(buckets) {
   const ticks = [0, niceMax / 2, niceMax];
   const bw = Math.max(2, plotW/n - (n > 15 ? 1 : 2));
   const currentHour = new Date().getHours();
+  const hasData = values.some(v => v > 0); // FIX: проверка наличия данных
 
-  let s = `<svg viewBox="0 0 ${W} ${H}" width="100%" xmlns="http://www.w3.org/2000/svg">`;
+  const parts = [`<svg viewBox="0 0 ${W} ${H}" width="100%" xmlns="http://www.w3.org/2000/svg">`];
   ticks.forEach(t => {
     const y = (pT + plotH - (t/niceMax)*plotH).toFixed(1);
     const label = t === 0 ? '0' : t < 1 ? `${t*60}m` : `${t}h`;
-    s += `<line x1="${pL}" y1="${y}" x2="${W-pR}" y2="${y}" stroke="var(--border)" stroke-width="1" stroke-dasharray="3 2"/>`;
-    s += `<text x="${pL-3}" y="${(+y+3.5).toFixed(1)}" text-anchor="end" fill="var(--muted)" font-size="6.5" font-family="DM Mono,monospace">${label}</text>`;
+    parts.push(
+      `<line x1="${pL}" y1="${y}" x2="${W-pR}" y2="${y}" stroke="var(--border)" stroke-width="1" stroke-dasharray="3 2"/>`,
+      `<text x="${pL-3}" y="${(+y+3.5).toFixed(1)}" text-anchor="end" fill="var(--muted)" font-size="6.5" font-family="DM Mono,monospace">${label}</text>`
+    );
   });
   values.forEach((v, i) => {
     const bh = v > 0 ? Math.max(3, (v/niceMaxMin)*plotH) : 0;
     const x  = (pL + (i/n)*plotW + (plotW/n - bw)/2).toFixed(1);
     const y  = (pT + plotH - bh).toFixed(1);
     const highlight = activePeriod === 'day' && i === currentHour;
-    s += `<rect x="${x}" y="${y}" width="${bw.toFixed(1)}" height="${Math.max(bh,0).toFixed(1)}" rx="2" fill="${v>0?'var(--green)':'var(--panel)'}" opacity="${highlight?1:0.75}"/>`;
+    parts.push(`<rect x="${x}" y="${y}" width="${bw.toFixed(1)}" height="${Math.max(bh,0).toFixed(1)}" rx="2" fill="${v>0?'var(--green)':'var(--panel)'}" opacity="${highlight?1:0.75}"/>`);
   });
   xAt.forEach((idx, li) => {
     const x = (pL + (idx/n)*plotW + (plotW/n)/2).toFixed(1);
-    s += `<text x="${x}" y="${H-4}" text-anchor="middle" fill="var(--muted)" font-size="6.5" font-family="DM Mono,monospace">${xLabels[li]}</text>`;
+    parts.push(`<text x="${x}" y="${H-4}" text-anchor="middle" fill="var(--muted)" font-size="6.5" font-family="DM Mono,monospace">${xLabels[li]}</text>`);
   });
-  s += `<line x1="${pL}" y1="${pT+plotH}" x2="${W-pR}" y2="${pT+plotH}" stroke="var(--border)" stroke-width="1"/>`;
-  s += `</svg>`;
-  return s;
+  parts.push(
+    `<line x1="${pL}" y1="${pT+plotH}" x2="${W-pR}" y2="${pT+plotH}" stroke="var(--border)" stroke-width="1"/>`,
+    `</svg>`
+  );
+  return parts.join('');
 }
 
-const TAG_COLORS = {
-  Work:'#4a8c50', Study:'#5b9bd5', Social:'#e8a838',
-  Rest:'#a07bc4', Entertainment:'#e06060', Sport:'#5bbda4', Other:'#8a9a8a'
-};
+// FIX 1: TAG_COLORS строится из TAGS, не дублируется
+const TAG_COLORS = Object.fromEntries(TAGS.map(({ tag, color }) => [tag, color]));
 
 function svgDonut(sessions) {
   const tagM = {};
@@ -893,32 +991,35 @@ function svgDonut(sessions) {
   const CX=70, CY=70, R=44, SW=22;
   const circ = 2 * Math.PI * R;
 
-  let svg = `<svg viewBox="0 0 210 140" width="100%" xmlns="http://www.w3.org/2000/svg">`;
+  const parts = [`<svg viewBox="0 0 210 140" width="100%" xmlns="http://www.w3.org/2000/svg">`];
   let cumPct = 0;
   entries.forEach(([tag, mins]) => {
     const pct = mins / total;
     const dash = pct * circ;
     const color = TAG_COLORS[tag] || '#8a9a8a';
-    svg += `<circle cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="${color}" stroke-width="${SW}"
-              stroke-dasharray="${dash.toFixed(2)} ${(circ-dash).toFixed(2)}"
-              transform="rotate(${(-90+cumPct*360).toFixed(2)}, ${CX}, ${CY})"/>`;
+    parts.push(`<circle cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="${color}" stroke-width="${SW}"
+      stroke-dasharray="${dash.toFixed(2)} ${(circ-dash).toFixed(2)}"
+      transform="rotate(${(-90+cumPct*360).toFixed(2)}, ${CX}, ${CY})"/>`);
     cumPct += pct;
   });
   const totalH = Math.round(total/60*10)/10;
-  svg += `<text x="${CX}" y="${CY-3}" text-anchor="middle" fill="var(--text)" font-size="9" font-family="DM Mono,monospace" font-weight="500">${totalH}h</text>`;
-  svg += `<text x="${CX}" y="${CY+9}" text-anchor="middle" fill="var(--muted)" font-size="7" font-family="Nunito,sans-serif">total</text>`;
-
+  parts.push(
+    `<text x="${CX}" y="${CY-3}" text-anchor="middle" fill="var(--text)" font-size="9" font-family="DM Mono,monospace" font-weight="500">${totalH}h</text>`,
+    `<text x="${CX}" y="${CY+9}" text-anchor="middle" fill="var(--muted)" font-size="7" font-family="Nunito,sans-serif">total</text>`
+  );
   let ly = 16;
   entries.slice(0, 5).forEach(([tag, mins]) => {
     const pct = Math.round(mins/total*100);
     const color = TAG_COLORS[tag] || '#8a9a8a';
-    svg += `<rect x="148" y="${ly-6}" width="7" height="7" rx="1.5" fill="${color}"/>`;
-    svg += `<text x="159" y="${ly+0.5}" fill="var(--text)" font-size="7.5" font-family="Nunito,sans-serif">${tag}</text>`;
-    svg += `<text x="208" y="${ly+0.5}" text-anchor="end" fill="var(--muted)" font-size="7" font-family="DM Mono,monospace">${pct}%</text>`;
+    parts.push(
+      `<rect x="148" y="${ly-6}" width="7" height="7" rx="1.5" fill="${color}"/>`,
+      `<text x="159" y="${ly+0.5}" fill="var(--text)" font-size="7.5" font-family="Nunito,sans-serif">${tag}</text>`,
+      `<text x="208" y="${ly+0.5}" text-anchor="end" fill="var(--muted)" font-size="7" font-family="DM Mono,monospace">${pct}%</text>`
+    );
     ly += 17;
   });
-  svg += `</svg>`;
-  return svg;
+  parts.push(`</svg>`);
+  return parts.join('');
 }
 
 function renderFavTrees(sessions) {
@@ -966,9 +1067,15 @@ function renderStats() {
   const avg = daysElapsed > 1 ? Math.round(total/daysElapsed) : total;
 
   const buckets  = getBarBuckets(activePeriod, sessions);
-  const bestIdx  = buckets.values.indexOf(Math.max(...buckets.values));
-  const bestVal  = buckets.values[bestIdx];
-  const bestLabels = { day: `${String(bestIdx).padStart(2,'0')}:00`, week: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][bestIdx], month: `Day ${bestIdx+1}`, year: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][bestIdx] };
+  const hasData  = buckets.values.some(v => v > 0); // FIX: проверка перед bestIdx
+  const bestIdx  = hasData ? buckets.values.indexOf(Math.max(...buckets.values)) : -1;
+  const bestVal  = hasData ? buckets.values[bestIdx] : 0;
+  const bestLabels = {
+    day:   bestIdx >= 0 ? `${String(bestIdx).padStart(2,'0')}:00` : '—',
+    week:  bestIdx >= 0 ? ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][bestIdx] : '—',
+    month: bestIdx >= 0 ? `Day ${bestIdx+1}` : '—',
+    year:  bestIdx >= 0 ? ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][bestIdx] : '—'
+  };
   const bestLabel = bestLabels[activePeriod];
 
   const streak = calcStreak();
@@ -1015,6 +1122,7 @@ function renderStats() {
    ════════════════════════════════════════ */
 loadState();
 coinDisplay.textContent = state.coins;
+initMainTags();       // FIX 1: теги рендерятся из TAGS
 renderGarden();
 renderRecentPlants();
 updateDial(25);

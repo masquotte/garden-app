@@ -58,15 +58,8 @@
       <div class="plant-preview" id="recentPlants"></div>
 
       <div class="section-label" style="margin-top:16px;">Session tag</div>
-      <div class="tags">
-        <button class="tag-btn active" data-tag="Work">💼 Work</button>
-        <button class="tag-btn" data-tag="Study">📚 Study</button>
-        <button class="tag-btn" data-tag="Social">💬 Social</button>
-        <button class="tag-btn" data-tag="Rest">🛋️ Rest</button>
-        <button class="tag-btn" data-tag="Entertainment">🎮 Fun</button>
-        <button class="tag-btn" data-tag="Sport">🏃 Sport</button>
-        <button class="tag-btn" data-tag="Other">✨ Other</button>
-      </div>
+      <!-- FIX 1: теги рендерятся из TAGS через initMainTags() в app.js -->
+      <div class="tags" id="mainTagsRow"></div>
 
       <hr class="divider">
 
@@ -160,6 +153,7 @@
     </div>
     <hr class="divider">
     <div class="section-label">Tag</div>
+    <!-- FIX 1: теги рендерятся из TAGS через renderPickerTags() -->
     <div class="tags" id="pickerTagsRow"></div>
     <hr class="divider">
     <div style="display:flex;justify-content:flex-end;">
