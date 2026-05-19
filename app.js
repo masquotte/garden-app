@@ -52,6 +52,45 @@ function getTodayGrid() {
   return state.gardens[today];
 }
 
+/* ════════════════════════════════════════
+   ПРОСМОТР ПРОШЛЫХ САДОВ
+   ════════════════════════════════════════ */
+let viewingDate = null; // null = сегодня; иначе строка 'YYYY-MM-DD'
+
+function getViewingDate() {
+  return viewingDate || getToday();
+}
+
+function isViewingToday() {
+  return !viewingDate || viewingDate === getToday();
+}
+
+function getViewingGrid() {
+  const date = getViewingDate();
+  // Для сегодня — создаём пустой сад в state, если его нет
+  // Для прошлых дат — возвращаем сохранённый сад или пустой массив (не пишем в state)
+  if (date === getToday()) return getTodayGrid();
+  return state.gardens[date] || Array(GRID_SIZE).fill(null);
+}
+
+function getEarliestGardenDate() {
+  const dates = Object.keys(state.gardens).filter(d => state.gardens[d].some(c => c));
+  if (!dates.length) return getToday();
+  return dates.sort()[0];
+}
+
+function shiftViewingDate(days) {
+  const current = getViewingDate();
+  const d = new Date(current + 'T00:00:00');
+  d.setDate(d.getDate() + days);
+  const newDate = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const today = getToday();
+  if (newDate > today) return;                       // не уходим в будущее
+  if (newDate < getEarliestGardenDate()) return;     // не уходим раньше самого первого сада
+  viewingDate = (newDate === today) ? null : newDate;
+  renderGarden();
+}
+
 function loadState() {
   try {
     const saved = localStorage.getItem('forest_v3');
@@ -184,6 +223,8 @@ dialTreeBtn.addEventListener('click', () => { openPlantPicker(); });
    ТЕГИ — рендер из единого источника
    ════════════════════════════════════════ */
 // FIX 1: теги рендерятся из TAGS, не из захардкоженного HTML
+// FIX 6: слушатель навешивается один раз через clone-replace (не накапливается),
+//        и сам переключает подсветку — это и был баг "теги на главной не кликаются"
 function renderTagRow(containerId, activeTag, onSelect) {
   const container = document.getElementById(containerId);
   if (!container) return;
@@ -192,9 +233,17 @@ function renderTagRow(containerId, activeTag, onSelect) {
       ${emoji} ${tag === 'Entertainment' ? 'Fun' : tag}
     </button>`
   ).join('');
-  container.addEventListener('click', e => {
+
+  // Снимаем все прежние слушатели клонированием узла
+  const fresh = container.cloneNode(true);
+  container.parentNode.replaceChild(fresh, container);
+
+  fresh.addEventListener('click', e => {
     const btn = e.target.closest('[data-tag]');
     if (!btn) return;
+    // Сразу переключаем визуальную подсветку внутри этого контейнера
+    fresh.querySelectorAll('.tag-btn').forEach(b =>
+      b.classList.toggle('active', b === btn));
     onSelect(btn.dataset.tag);
   });
 }
@@ -297,10 +346,9 @@ function renderPickerTags() {
   renderTagRow('pickerTagsRow', pickerTag, tag => {
     pickerTag = tag;
     activeTag = tag;
-    // синхронизируем главную панель тегов
-    document.querySelectorAll('#mainTagsRow [data-tag]').forEach(b =>
+    // синхронизируем подсветку главной панели тегов без перерендера
+    document.querySelectorAll('#mainTagsRow .tag-btn').forEach(b =>
       b.classList.toggle('active', b.dataset.tag === tag));
-    renderPickerTags();
   });
 }
 
@@ -355,8 +403,10 @@ const toast        = document.getElementById('toast');
 function initMainTags() {
   renderTagRow('mainTagsRow', activeTag, tag => {
     activeTag = tag;
-    // синхронизируем пикер если открыт
     pickerTag = tag;
+    // если пикер открыт — синхронизируем подсветку и там
+    document.querySelectorAll('#pickerTagsRow .tag-btn').forEach(b =>
+      b.classList.toggle('active', b.dataset.tag === tag));
   });
 }
 
@@ -411,6 +461,9 @@ function endSession(completed) {
   recordSession(dialValue, completed, earned);
   saveState();
   renderCoins(completed);
+  // Если юзер во время сессии листал старые сады — возвращаем на сегодня,
+  // чтобы он увидел только что посаженное (или увядшее) дерево
+  viewingDate = null;
   renderGarden(idx);
 
   if (completed) {
@@ -590,8 +643,26 @@ function buildGardenSprites(cells, grid, newIdx) {
 function renderGardenStats(grid) {
   const dateEl = document.getElementById('gardenDate');
   if (dateEl) {
-    const d = new Date();
-    dateEl.textContent = `Today — ${d.getDate()} ${d.toLocaleString('en', { month: 'long' })} ${d.getFullYear()}`;
+    const dateStr = getViewingDate();
+    const d = new Date(dateStr + 'T00:00:00');
+    const formatted = `${d.getDate()} ${d.toLocaleString('en', { month: 'long' })} ${d.getFullYear()}`;
+    const prefix = isViewingToday() ? 'Today — ' : '';
+
+    const canGoBack    = dateStr > getEarliestGardenDate();
+    const canGoForward = !isViewingToday();
+
+    dateEl.innerHTML = `
+      <button class="date-nav-btn" id="dateNavPrev" ${!canGoBack ? 'disabled' : ''} aria-label="Previous day">‹</button>
+      <span class="date-nav-label">${prefix}${formatted}</span>
+      <button class="date-nav-btn" id="dateNavNext" ${!canGoForward ? 'disabled' : ''} aria-label="Next day">›</button>
+    `;
+
+    if (canGoBack) {
+      document.getElementById('dateNavPrev').addEventListener('click', () => shiftViewingDate(-1));
+    }
+    if (canGoForward) {
+      document.getElementById('dateNavNext').addEventListener('click', () => shiftViewingDate(1));
+    }
   }
   const alive = grid.filter(c => c && !c.dead).length;
   const dead  = grid.filter(c => c && c.dead).length;
@@ -599,7 +670,7 @@ function renderGardenStats(grid) {
 }
 
 function renderGarden(newIdx = -1) {
-  const grid       = getTodayGrid();
+  const grid       = getViewingGrid();
   const activeLand = state.activeLand || 'grass';
 
   const cells = [];
@@ -786,6 +857,7 @@ document.getElementById('importFile').addEventListener('change', e => {
   reader.onload = ev => {
     try {
       state = migrate(JSON.parse(ev.target.result));
+      viewingDate = null; // сбрасываем просмотр на сегодня
       saveState();
       renderCoins();
       renderGarden();

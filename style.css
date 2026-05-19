@@ -285,9 +285,41 @@ body.running .state-running { display: block; }
 }
 
 .garden-date {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-family: 'DM Mono', monospace;
   font-size: 0.78rem;
   color: var(--muted);
+}
+
+.date-nav-btn {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  font-family: 'DM Mono', monospace;
+}
+.date-nav-btn:hover:not(:disabled) {
+  border-color: var(--green);
+  color: var(--green-lt);
+}
+.date-nav-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+.date-nav-label {
+  white-space: nowrap;
 }
 
 .grid { 
