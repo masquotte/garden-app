@@ -402,6 +402,14 @@ body.dark .card-garden {
   background: linear-gradient(180deg, #0d1f2d 0%, #1a2e1c 60%, #0f2010 100%);
 }
 
+/* Зимний фон — без зелени, холодные синие тона */
+.card-garden.land-snow {
+  background: linear-gradient(180deg, #daeaf5 0%, #c8dff0 50%, #b8d0e8 100%);
+}
+body.dark .card-garden.land-snow {
+  background: linear-gradient(180deg, #0a1520 0%, #0d1e30 50%, #0a1828 100%);
+}
+
 @media (max-width: 680px) {
   .content-row { flex-direction: column; }
   .card-timer, .card-garden { flex: none; width: 100%; }
@@ -700,6 +708,23 @@ body.dark .card-garden {
 @keyframes twinkle2 { 0%,100%{opacity:0.5;transform:scale(1)}   50%{opacity:1;transform:scale(1.4)} }
 @keyframes twinkle3 { 0%,100%{opacity:0.25;transform:scale(0.8)} 50%{opacity:0.8;transform:scale(1.1)} }
 
+/* snowflakes */
+.snowflake {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.9);
+  pointer-events: none;
+}
+body.dark .snowflake {
+  background: rgba(180,210,240,0.55);
+}
+@keyframes snowfall {
+  0%   { transform: translateY(-10px) translateX(0px);   opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 0.8; }
+  100% { transform: translateY(105%) translateX(var(--drift)); opacity: 0; }
+}
+
 /* ─── STATISTICS ─── */
 .stats-section-wrap {
   width: 100%;
@@ -820,4 +845,67 @@ body.dark .card-garden {
   max-height: 0;
   opacity: 0;
   margin-top: 0;
+}
+/* ─── LAND PICKER POPUP (клик по тайлу) ─── */
+.land-picker-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  backdrop-filter: blur(3px);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+}
+.land-picker-overlay.open { display: flex; }
+
+.land-picker-popup {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 22px 22px;
+  width: 320px;
+  max-width: calc(100vw - 32px);
+}
+
+.land-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.land-picker-card {
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.15s;
+  background: var(--panel);
+  text-align: center;
+}
+.land-picker-card:hover { border-color: var(--green); transform: translateY(-2px); }
+.land-picker-card.active { border-color: var(--green); background: var(--green-dim); }
+.land-picker-card.locked { opacity: 0.45; cursor: default; }
+.land-picker-card.locked:hover { transform: none; border-color: var(--border); }
+.land-picker-card img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  display: block;
+}
+.land-picker-card-name {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted);
+  font-family: 'Nunito', sans-serif;
+  padding: 4px 4px 6px;
+  display: block;
+}
+.land-picker-card.active .land-picker-card-name { color: var(--green-lt); }
+.land-picker-card-price {
+  font-size: 9px;
+  color: var(--gold-lt);
+  font-family: 'DM Mono', monospace;
+  padding: 0 4px 6px;
 }

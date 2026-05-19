@@ -11,6 +11,15 @@ const LANDS = {
       dark:  'stars'
     }
   },
+  snow: {
+    name: "Snow",
+    price: 400,
+    default: false,
+    effect: {
+      light: 'snow',
+      dark:  'snow-dark'
+    }
+  },
 };
 
 function getDefaultUnlockedLands() {

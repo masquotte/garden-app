@@ -517,6 +517,13 @@ function renderEffect() {
 
   const land   = LANDS[state.activeLand || 'grass'];
   const effect = land?.effect;
+
+  // Переключаем класс фона на карточке сада
+  const cardGarden = document.querySelector('.card-garden');
+  if (cardGarden) {
+    cardGarden.classList.toggle('land-snow', state.activeLand === 'snow');
+  }
+
   if (!effect) { layer.innerHTML = ''; return; }
 
   const isDark  = document.body.classList.contains('dark');
@@ -565,6 +572,39 @@ function renderEffect() {
       `<div class="star" style="width:${s}px;height:${s}px;top:${t};left:${l};
         animation:${a} ${dur} ease-in-out infinite;animation-delay:${d};"></div>`
     ).join('');
+
+  } else if (type === 'snow' || type === 'snow-dark') {
+    // 18 снежинок разного размера, скорости и горизонтального дрейфа
+    const flakes = [
+      {s:3, l:'5%',  dur:'7s',  d:'0s',    drift:'12px'},
+      {s:2, l:'12%', dur:'9s',  d:'-2s',   drift:'-8px'},
+      {s:4, l:'20%', dur:'6s',  d:'-4s',   drift:'16px'},
+      {s:2, l:'28%', dur:'11s', d:'-1s',   drift:'-14px'},
+      {s:3, l:'35%', dur:'8s',  d:'-6s',   drift:'10px'},
+      {s:5, l:'42%', dur:'7.5s',d:'-3s',   drift:'-6px'},
+      {s:2, l:'50%', dur:'10s', d:'-5s',   drift:'18px'},
+      {s:3, l:'57%', dur:'6.5s',d:'-1.5s', drift:'-10px'},
+      {s:4, l:'64%', dur:'9s',  d:'-7s',   drift:'8px'},
+      {s:2, l:'70%', dur:'7s',  d:'-2.5s', drift:'-16px'},
+      {s:3, l:'76%', dur:'11s', d:'-4.5s', drift:'12px'},
+      {s:2, l:'82%', dur:'8s',  d:'-0.5s', drift:'-4px'},
+      {s:4, l:'88%', dur:'6s',  d:'-3.5s', drift:'14px'},
+      {s:3, l:'93%', dur:'9.5s',d:'-6.5s', drift:'-12px'},
+      {s:2, l:'8%',  dur:'8.5s',d:'-8s',   drift:'6px'},
+      {s:3, l:'47%', dur:'7s',  d:'-9s',   drift:'-8px'},
+      {s:2, l:'60%', dur:'10s', d:'-10s',  drift:'10px'},
+      {s:4, l:'78%', dur:'6.5s',d:'-11s',  drift:'-6px'},
+    ];
+    layer.innerHTML = flakes.map(({s, l, dur, d, drift}) =>
+      `<div class="snowflake" style="
+        width:${s}px; height:${s}px;
+        left:${l}; top:-${s}px;
+        --drift:${drift};
+        animation: snowfall ${dur} linear infinite;
+        animation-delay:${d};
+      "></div>`
+    ).join('');
+
   } else {
     layer.innerHTML = '';
   }
@@ -593,6 +633,9 @@ function buildGardenDefs(cells) {
 
 function buildGardenTiles(cells, grid, activeLand) {
   const HW = 44, HH = 22, D = 11, GCX = 230, GCY = 160;
+  // Цвет боковых граней зависит от типа земли
+  const sideR = activeLand === 'snow' ? '#8aafc8' : '#3a6128';
+  const sideL = activeLand === 'snow' ? '#6a90a8' : '#2a4a1c';
   const parts = [];
   for (const { r, c, idx } of cells) {
     const cx = GCX + (c - r) * HW, cy = GCY + (r + c) * HH;
@@ -603,9 +646,9 @@ function buildGardenTiles(cells, grid, activeLand) {
         clip-path="url(#clip-${idx})"
         preserveAspectRatio="xMidYMid slice"/>`,
       `<polygon points="${rp.x},${rp.y} ${bp.x},${bp.y} ${bp.x},${bp.y + D} ${rp.x},${rp.y + D}"
-        fill="#3a6128"/>`,
+        fill="${sideR}"/>`,
       `<polygon points="${lp.x},${lp.y} ${bp.x},${bp.y} ${bp.x},${bp.y + D} ${lp.x},${lp.y + D}"
-        fill="#2a4a1c"/>`
+        fill="${sideL}"/>`
     );
   }
   return parts.join('');
@@ -637,6 +680,19 @@ function buildGardenSprites(cells, grid, newIdx) {
       `<image href="${href}" x="${imgX}" y="${imgY}"
         width="${SW}" height="${SH}" class="${cls}"/>`
     ].join('');
+  }).join('');
+}
+
+// Прозрачные кликабельные ромбы поверх тайлов (для открытия land picker)
+function buildGardenTileClickZones(cells) {
+  const HW = 44, HH = 22, GCX = 230, GCY = 160;
+  return cells.map(({ r, c }) => {
+    const cx = GCX + (c - r) * HW, cy = GCY + (r + c) * HH;
+    const tp = `${cx},${cy - HH}`, rp = `${cx + HW},${cy}`,
+          bp = `${cx},${cy + HH}`, lp = `${cx - HW},${cy}`;
+    return `<polygon points="${tp} ${rp} ${bp} ${lp}"
+      fill="transparent" class="tile-click-zone"
+      style="cursor:pointer;" opacity="0"/>`;
   }).join('');
 }
 
@@ -679,16 +735,24 @@ function renderGarden(newIdx = -1) {
       cells.push({ r, c, idx: r * GRID_COLS + c });
   cells.sort((a, b) => (a.r + a.c) - (b.r + b.c));
 
-  // FIX 4: array.join вместо конкатенации строк в цикле
   const svg = [
     `<svg width="100%" viewBox="0 0 460 380" xmlns="http://www.w3.org/2000/svg">`,
     buildGardenDefs(cells),
     buildGardenTiles(cells, grid, activeLand),
     buildGardenSprites(cells, grid, newIdx),
+    buildGardenTileClickZones(cells),
     `</svg>`
   ].join('');
 
   gardenGrid.innerHTML = svg;
+
+  // Навешиваем обработчик клика на прозрачные зоны тайлов
+  if (isViewingToday()) {
+    gardenGrid.querySelectorAll('.tile-click-zone').forEach(el => {
+      el.addEventListener('click', () => openLandPicker());
+    });
+  }
+
   renderGardenStats(grid);
   renderEffect();
 }
@@ -823,6 +887,57 @@ function buyLand(key) {
   renderLandShop();
   renderGarden();
   showToast(`🌿 ${land.name} selected!`);
+}
+
+/* ════════════════════════════════════════
+   LAND PICKER (клик по тайлу сада)
+   ════════════════════════════════════════ */
+const landPickerOverlay = document.getElementById('landPickerOverlay');
+document.getElementById('landPickerClose').addEventListener('click', () =>
+  landPickerOverlay.classList.remove('open'));
+landPickerOverlay.addEventListener('click', e => {
+  if (e.target === landPickerOverlay) landPickerOverlay.classList.remove('open');
+});
+
+function openLandPicker() {
+  renderLandPickerGrid();
+  landPickerOverlay.classList.add('open');
+}
+
+function renderLandPickerGrid() {
+  const grid = document.getElementById('landPickerGrid');
+  grid.innerHTML = Object.entries(LANDS).map(([key, land]) => {
+    const owned    = (state.unlocked.lands || []).includes(key);
+    const isActive = (state.activeLand || 'grass') === key;
+    const price    = !owned ? `<div class="land-picker-card-price">🪙 ${land.price}</div>` : '';
+    return `
+      <div class="land-picker-card ${isActive ? 'active' : ''} ${!owned ? 'locked' : ''}"
+           data-land-key="${key}" data-owned="${owned}">
+        <img src="land/${key}.png" alt="${land.name}"
+             onerror="this.style.display='none'">
+        <span class="land-picker-card-name">${land.name}${isActive ? ' ✓' : ''}</span>
+        ${price}
+      </div>`;
+  }).join('');
+
+  grid.addEventListener('click', e => {
+    const card = e.target.closest('[data-land-key]');
+    if (!card) return;
+    const key   = card.dataset.landKey;
+    const owned = card.dataset.owned === 'true';
+    if (!owned) {
+      // Нет денег или не куплено — открываем магазин
+      landPickerOverlay.classList.remove('open');
+      activeShopTab = 'land';
+      document.getElementById('tabTrees').classList.remove('active');
+      document.getElementById('tabLand').classList.add('active');
+      renderLandShop();
+      shopOverlay.classList.add('open');
+    } else {
+      buyLand(key);
+      landPickerOverlay.classList.remove('open');
+    }
+  });
 }
 
 /* ════════════════════════════════════════
