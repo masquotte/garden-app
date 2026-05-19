@@ -894,14 +894,24 @@ function buyLand(key) {
    ════════════════════════════════════════ */
 const landPickerOverlay = document.getElementById('landPickerOverlay');
 document.getElementById('landPickerClose').addEventListener('click', () =>
-  landPickerOverlay.classList.remove('open'));
+  closeLandPicker());
 landPickerOverlay.addEventListener('click', e => {
-  if (e.target === landPickerOverlay) landPickerOverlay.classList.remove('open');
+  if (e.target === landPickerOverlay) closeLandPicker();
 });
 
 function openLandPicker() {
   renderLandPickerGrid();
+  hideConfirm();
   landPickerOverlay.classList.add('open');
+}
+
+function closeLandPicker() {
+  landPickerOverlay.classList.remove('open');
+  hideConfirm();
+}
+
+function hideConfirm() {
+  document.getElementById('landPickerConfirm').style.display = 'none';
 }
 
 function renderLandPickerGrid() {
@@ -909,35 +919,76 @@ function renderLandPickerGrid() {
   grid.innerHTML = Object.entries(LANDS).map(([key, land]) => {
     const owned    = (state.unlocked.lands || []).includes(key);
     const isActive = (state.activeLand || 'grass') === key;
-    const price    = !owned ? `<div class="land-picker-card-price">🪙 ${land.price}</div>` : '';
+    const canAfford = state.coins >= land.price;
+
+    let cls = '';
+    if (isActive) cls = 'lp-active';
+    else if (!owned && !canAfford) cls = 'lp-cant-afford';
+
+    const foot = owned
+      ? `<span class="land-picker-card-unlocked">${isActive ? 'Active ✓' : 'Unlocked'}</span>`
+      : `<div class="land-picker-card-price"><span>🪙</span>${land.price}</div>`;
+
     return `
-      <div class="land-picker-card ${isActive ? 'active' : ''} ${!owned ? 'locked' : ''}"
-           data-land-key="${key}" data-owned="${owned}">
-        <img src="land/${key}.png" alt="${land.name}"
-             onerror="this.style.display='none'">
-        <span class="land-picker-card-name">${land.name}${isActive ? ' ✓' : ''}</span>
-        ${price}
+      <div class="land-picker-card ${cls}" data-land-key="${key}" data-owned="${owned}" data-can-afford="${canAfford}">
+        <div class="land-picker-card-img">
+          <img src="land/${key}.png" alt="${land.name}"
+               onerror="this.parentElement.innerHTML='<div class=shop-placeholder></div>'">
+        </div>
+        <div class="land-picker-card-foot">
+          <span class="land-picker-card-name">${land.name}</span>
+          ${foot}
+        </div>
       </div>`;
   }).join('');
 
-  grid.addEventListener('click', e => {
+  // Один слушатель через делегирование
+  const fresh = grid.cloneNode(true);
+  grid.parentNode.replaceChild(fresh, grid);
+  fresh.addEventListener('click', e => {
     const card = e.target.closest('[data-land-key]');
     if (!card) return;
-    const key   = card.dataset.landKey;
-    const owned = card.dataset.owned === 'true';
-    if (!owned) {
-      // Нет денег или не куплено — открываем магазин
-      landPickerOverlay.classList.remove('open');
-      activeShopTab = 'land';
-      document.getElementById('tabTrees').classList.remove('active');
-      document.getElementById('tabLand').classList.add('active');
-      renderLandShop();
-      shopOverlay.classList.add('open');
-    } else {
+    const key       = card.dataset.landKey;
+    const owned     = card.dataset.owned === 'true';
+    const canAfford = card.dataset.canAfford === 'true';
+    const isActive  = (state.activeLand || 'grass') === key;
+
+    if (isActive) return; // уже активна — ничего
+
+    if (owned) {
+      // Просто применяем
       buyLand(key);
-      landPickerOverlay.classList.remove('open');
+      closeLandPicker();
+    } else if (canAfford) {
+      // Показываем confirm
+      showConfirm(key);
+    } else {
+      showToast('🪙 Not enough coins');
     }
   });
+}
+
+function showConfirm(key) {
+  const land = LANDS[key];
+  const confirmEl  = document.getElementById('landPickerConfirm');
+  const confirmTxt = document.getElementById('landPickerConfirmText');
+  confirmTxt.innerHTML = `Buy <strong>${land.name}</strong> for <strong>🪙 ${land.price}</strong>?`;
+  confirmEl.style.display = 'block';
+
+  const yesBtn = document.getElementById('landPickerConfirmYes');
+  const noBtn  = document.getElementById('landPickerConfirmNo');
+
+  // Клонируем чтобы убрать старые обработчики
+  const freshYes = yesBtn.cloneNode(true);
+  const freshNo  = noBtn.cloneNode(true);
+  yesBtn.parentNode.replaceChild(freshYes, yesBtn);
+  noBtn.parentNode.replaceChild(freshNo, noBtn);
+
+  freshYes.addEventListener('click', () => {
+    buyLand(key);
+    closeLandPicker();
+  });
+  freshNo.addEventListener('click', () => hideConfirm());
 }
 
 /* ════════════════════════════════════════

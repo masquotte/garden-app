@@ -864,19 +864,20 @@ body.dark .snowflake {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 20px 22px 22px;
-  width: 320px;
+  width: 300px;
   max-width: calc(100vw - 32px);
 }
 
+/* Сетка как в магазине — 4 колонки, компактные карточки */
 .land-picker-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 8px;
   margin-top: 4px;
 }
 
 .land-picker-card {
-  border: 1.5px solid var(--border);
+  border: 0.5px solid var(--border);
   border-radius: var(--radius-sm);
   overflow: hidden;
   cursor: pointer;
@@ -885,27 +886,73 @@ body.dark .snowflake {
   text-align: center;
 }
 .land-picker-card:hover { border-color: var(--green); transform: translateY(-2px); }
-.land-picker-card.active { border-color: var(--green); background: var(--green-dim); }
-.land-picker-card.locked { opacity: 0.45; cursor: default; }
-.land-picker-card.locked:hover { transform: none; border-color: var(--border); }
-.land-picker-card img {
-  width: 100%;
+.land-picker-card.lp-active { border-color: var(--green); border-width: 1.5px; }
+.land-picker-card.lp-cant-afford { opacity: 0.5; }
+.land-picker-card.lp-cant-afford:hover { transform: none; border-color: var(--border); }
+
+/* Изображение — как .shop-img */
+.land-picker-card-img {
+  background: var(--panel);
   aspect-ratio: 1;
-  object-fit: cover;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.land-picker-card-img img {
+  width: 85%;
+  height: 85%;
+  object-fit: contain;
+  padding: 4px 4px 0 4px;
+  object-position: center top;
   display: block;
+}
+
+/* Футер — как .shop-foot */
+.land-picker-card-foot {
+  padding: 5px 4px 6px;
+  text-align: center;
 }
 .land-picker-card-name {
+  display: block;
   font-size: 10px;
   font-weight: 600;
-  color: var(--muted);
+  color: var(--text);
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-family: 'Nunito', sans-serif;
-  padding: 4px 4px 6px;
-  display: block;
 }
-.land-picker-card.active .land-picker-card-name { color: var(--green-lt); }
 .land-picker-card-price {
-  font-size: 9px;
+  font-size: 10px;
   color: var(--gold-lt);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
   font-family: 'DM Mono', monospace;
-  padding: 0 4px 6px;
+}
+.land-picker-card-unlocked {
+  font-size: 9px;
+  color: var(--green);
+  font-weight: 600;
+}
+
+/* Диалог подтверждения покупки */
+.land-picker-confirm {
+  margin-top: 14px;
+  padding: 12px 14px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  color: var(--text);
+  text-align: center;
+}
+.land-picker-confirm-btns {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  justify-content: center;
 }

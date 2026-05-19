@@ -13,7 +13,7 @@ const LANDS = {
   },
   snow: {
     name: "Snow",
-    price: 400,
+    price: 300,
     default: false,
     effect: {
       light: 'snow',
