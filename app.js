@@ -91,13 +91,13 @@ function shiftViewingDate(days) {
   renderGarden();
 }
 
-function loadState() {
+async function loadState() {
   try {
-    const saved = localStorage.getItem('forest_v3');
-    if (!saved) return;
-    state = migrate(JSON.parse(saved));
+    const res = await fetch('/api/state');
+    const data = await res.json();
+    if (data) state = migrate(data);
   } catch(e) {
-    console.warn('Load error', e);
+    console.warn('Could not load state from server', e);
   }
 }
 
@@ -126,11 +126,15 @@ function migrate(saved) {
 }
 
 // FIX 3: saveState обёрнут в try/catch
-function saveState() {
+async function saveState() {
   try {
-    localStorage.setItem('forest_v3', JSON.stringify(state));
+    await fetch('/api/state', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(state)
+    });
   } catch(e) {
-    console.warn('Save error — storage may be full or unavailable', e);
+    console.warn('Could not save state to server', e);
     showToast('⚠️ Could not save progress');
   }
 }
@@ -1437,10 +1441,14 @@ function renderStats() {
 /* ════════════════════════════════════════
    INIT
    ════════════════════════════════════════ */
-loadState();
-coinDisplay.textContent = state.coins;
-initMainTags();       // FIX 1: теги рендерятся из TAGS
-renderGarden();
-renderRecentPlants();
-updateDial(25);
-renderStats();
+async function init() {
+  await loadState();
+  coinDisplay.textContent = state.coins;
+  initMainTags();
+  renderGarden();
+  renderRecentPlants();
+  updateDial(25);
+  renderStats();
+}
+
+init();
