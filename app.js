@@ -555,47 +555,56 @@ function renderEffect() {
 
   } else if (type === 'stars') {
     const stars = [
-      {s:2, t:'12%', l:'15%', a:'twinkle1', d:'0s',    dur:'5.2s'},
-      {s:3, t:'7%',  l:'40%', a:'twinkle2', d:'-2s',   dur:'8.4s'},
-      {s:2, t:'20%', l:'62%', a:'twinkle1', d:'-4s',   dur:'6.8s'},
-      {s:2, t:'5%',  l:'78%', a:'twinkle3', d:'-1s',   dur:'7.2s'},
-      {s:3, t:'25%', l:'88%', a:'twinkle2', d:'-6s',   dur:'9.1s'},
-      {s:2, t:'32%', l:'25%', a:'twinkle1', d:'-3s',   dur:'5.8s'},
-      {s:2, t:'4%',  l:'55%', a:'twinkle3', d:'-5s',   dur:'6.4s'},
-      {s:3, t:'16%', l:'72%', a:'twinkle1', d:'-7s',   dur:'8.7s'},
-      {s:2, t:'28%', l:'48%', a:'twinkle2', d:'-1.5s', dur:'7.4s'},
-      {s:2, t:'9%',  l:'92%', a:'twinkle3', d:'-4.5s', dur:'9.8s'},
-      {s:3, t:'22%', l:'8%',  a:'twinkle1', d:'-2.5s', dur:'6.1s'},
-      {s:2, t:'38%', l:'82%', a:'twinkle2', d:'-3.5s', dur:'8.2s'},
+      {s:5,  t:'8%',  l:'5%',  a:'twinkle1', d:'0s',    dur:'5.2s'},
+      {s:7,  t:'28%', l:'14%', a:'twinkle2', d:'-3s',   dur:'8.4s'},
+      {s:4,  t:'16%', l:'22%', a:'twinkle3', d:'-6s',   dur:'7.2s'},
+      {s:5,  t:'5%',  l:'32%', a:'twinkle1', d:'-1.5s', dur:'6.1s'},
+      {s:7,  t:'22%', l:'44%', a:'twinkle2', d:'-5s',   dur:'9.1s'},
+      {s:4,  t:'35%', l:'36%', a:'twinkle3', d:'-8s',   dur:'6.4s'},
+      {s:5,  t:'12%', l:'58%', a:'twinkle1', d:'-2.5s', dur:'7.4s'},
+      {s:4,  t:'32%', l:'68%', a:'twinkle3', d:'-4s',   dur:'5.8s'},
+      {s:7,  t:'6%',  l:'74%', a:'twinkle2', d:'-7s',   dur:'8.7s'},
+      {s:4,  t:'20%', l:'82%', a:'twinkle3', d:'-0.5s', dur:'6.8s'},
+      {s:5,  t:'38%', l:'90%', a:'twinkle1', d:'-3.5s', dur:'5.2s'},
+      {s:7,  t:'10%', l:'96%', a:'twinkle2', d:'-9s',   dur:'9.8s'},
     ];
-    layer.innerHTML = stars.map(({s,t,l,a,d,dur}) =>
-      `<div class="star" style="width:${s}px;height:${s}px;top:${t};left:${l};
-        animation:${a} ${dur} ease-in-out infinite;animation-delay:${d};"></div>`
-    ).join('');
+    // Четырёхконечные SVG-звёздочки тёплого жёлтого цвета
+    layer.innerHTML = stars.map(({s, t, l, a, d, dur}) => {
+      const h = s / 2;
+      const i = s * 0.18;
+      const pts = [
+        `${h},0`, `${h+i},${h-i}`, `${s},${h}`, `${h+i},${h+i}`,
+        `${h},${s}`, `${h-i},${h+i}`, `0,${h}`, `${h-i},${h-i}`
+      ].join(' ');
+      return `<svg style="position:absolute;top:${t};left:${l};width:${s}px;height:${s}px;
+        animation:${a} ${dur} ease-in-out infinite;animation-delay:${d};overflow:visible;"
+        viewBox="0 0 ${s} ${s}" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="${pts}" fill="rgba(255,224,100,0.9)"/>
+      </svg>`;
+    }).join('');
 
   } else if (type === 'snow' || type === 'snow-dark') {
-    // 18 снежинок разного размера, скорости и горизонтального дрейфа
     const flakes = [
-      {s:3, l:'5%',  dur:'7s',  d:'0s',    drift:'12px'},
-      {s:2, l:'12%', dur:'9s',  d:'-2s',   drift:'-8px'},
-      {s:4, l:'20%', dur:'6s',  d:'-4s',   drift:'16px'},
-      {s:2, l:'28%', dur:'11s', d:'-1s',   drift:'-14px'},
-      {s:3, l:'35%', dur:'8s',  d:'-6s',   drift:'10px'},
-      {s:5, l:'42%', dur:'7.5s',d:'-3s',   drift:'-6px'},
-      {s:2, l:'50%', dur:'10s', d:'-5s',   drift:'18px'},
-      {s:3, l:'57%', dur:'6.5s',d:'-1.5s', drift:'-10px'},
-      {s:4, l:'64%', dur:'9s',  d:'-7s',   drift:'8px'},
-      {s:2, l:'70%', dur:'7s',  d:'-2.5s', drift:'-16px'},
-      {s:3, l:'76%', dur:'11s', d:'-4.5s', drift:'12px'},
-      {s:2, l:'82%', dur:'8s',  d:'-0.5s', drift:'-4px'},
-      {s:4, l:'88%', dur:'6s',  d:'-3.5s', drift:'14px'},
-      {s:3, l:'93%', dur:'9.5s',d:'-6.5s', drift:'-12px'},
-      {s:2, l:'8%',  dur:'8.5s',d:'-8s',   drift:'6px'},
-      {s:3, l:'47%', dur:'7s',  d:'-9s',   drift:'-8px'},
-      {s:2, l:'60%', dur:'10s', d:'-10s',  drift:'10px'},
-      {s:4, l:'78%', dur:'6.5s',d:'-11s',  drift:'-6px'},
+      {s:3, l:'5%',  dur:'14.7s', d:'0s',    drift:'12px'},
+      {s:2, l:'12%', dur:'18.9s', d:'-2s',   drift:'-8px'},
+      {s:4, l:'20%', dur:'12.6s', d:'-4s',   drift:'16px'},
+      {s:2, l:'28%', dur:'23.1s', d:'-1s',   drift:'-14px'},
+      {s:3, l:'35%', dur:'16.8s', d:'-6s',   drift:'10px'},
+      {s:5, l:'42%', dur:'15.8s', d:'-3s',   drift:'-6px'},
+      {s:2, l:'50%', dur:'21s',   d:'-5s',   drift:'18px'},
+      {s:3, l:'57%', dur:'13.7s', d:'-1.5s', drift:'-10px'},
+      {s:4, l:'64%', dur:'18.9s', d:'-7s',   drift:'8px'},
+      {s:2, l:'70%', dur:'14.7s', d:'-2.5s', drift:'-16px'},
+      {s:3, l:'76%', dur:'23.1s', d:'-4.5s', drift:'12px'},
+      {s:2, l:'82%', dur:'16.8s', d:'-0.5s', drift:'-4px'},
+      {s:4, l:'88%', dur:'12.6s', d:'-3.5s', drift:'14px'},
+      {s:3, l:'93%', dur:'20s',   d:'-6.5s', drift:'-12px'},
+      {s:2, l:'8%',  dur:'17.9s', d:'-8s',   drift:'6px'},
+      {s:3, l:'47%', dur:'14.7s', d:'-9s',   drift:'-8px'},
+      {s:2, l:'60%', dur:'21s',   d:'-10s',  drift:'10px'},
+      {s:4, l:'78%', dur:'13.7s', d:'-11s',  drift:'-6px'},
     ];
-    layer.innerHTML = flakes.map(({s, l, dur, d, drift}) =>
+    const snowHTML = flakes.map(({s, l, dur, d, drift}) =>
       `<div class="snowflake" style="
         width:${s}px; height:${s}px;
         left:${l}; top:-${s}px;
@@ -604,6 +613,39 @@ function renderEffect() {
         animation-delay:${d};
       "></div>`
     ).join('');
+
+    if (type === 'snow-dark') {
+      // Ночью: звёзды + снег
+      const stars = [
+        {s:5,  t:'8%',  l:'5%',  a:'twinkle1', d:'0s',    dur:'5.2s'},
+        {s:7,  t:'28%', l:'14%', a:'twinkle2', d:'-3s',   dur:'8.4s'},
+        {s:4,  t:'16%', l:'22%', a:'twinkle3', d:'-6s',   dur:'7.2s'},
+        {s:5,  t:'5%',  l:'32%', a:'twinkle1', d:'-1.5s', dur:'6.1s'},
+        {s:7,  t:'22%', l:'44%', a:'twinkle2', d:'-5s',   dur:'9.1s'},
+        {s:4,  t:'35%', l:'36%', a:'twinkle3', d:'-8s',   dur:'6.4s'},
+        {s:5,  t:'12%', l:'58%', a:'twinkle1', d:'-2.5s', dur:'7.4s'},
+        {s:4,  t:'32%', l:'68%', a:'twinkle3', d:'-4s',   dur:'5.8s'},
+        {s:7,  t:'6%',  l:'74%', a:'twinkle2', d:'-7s',   dur:'8.7s'},
+        {s:4,  t:'20%', l:'82%', a:'twinkle3', d:'-0.5s', dur:'6.8s'},
+        {s:5,  t:'38%', l:'90%', a:'twinkle1', d:'-3.5s', dur:'5.2s'},
+        {s:7,  t:'10%', l:'96%', a:'twinkle2', d:'-9s',   dur:'9.8s'},
+      ];
+      const starsHTML = stars.map(({s, t, l, a, d, dur}) => {
+        const h = s / 2, i = s * 0.18;
+        const pts = [
+          `${h},0`, `${h+i},${h-i}`, `${s},${h}`, `${h+i},${h+i}`,
+          `${h},${s}`, `${h-i},${h+i}`, `0,${h}`, `${h-i},${h-i}`
+        ].join(' ');
+        return `<svg style="position:absolute;top:${t};left:${l};width:${s}px;height:${s}px;
+          animation:${a} ${dur} ease-in-out infinite;animation-delay:${d};overflow:visible;"
+          viewBox="0 0 ${s} ${s}" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="${pts}" fill="rgba(255,224,100,0.9)"/>
+        </svg>`;
+      }).join('');
+      layer.innerHTML = starsHTML + snowHTML;
+    } else {
+      layer.innerHTML = snowHTML;
+    }
 
   } else {
     layer.innerHTML = '';
@@ -636,11 +678,18 @@ function buildGardenTiles(cells, grid, activeLand) {
   // Цвет боковых граней зависит от типа земли
   const sideR = activeLand === 'snow' ? '#8aafc8' : '#3a6128';
   const sideL = activeLand === 'snow' ? '#6a90a8' : '#2a4a1c';
+  // Цвет верхней грани как fallback (если PNG не загрузится)
+  const topFill = activeLand === 'snow' ? '#c8dff0' : '#5a8f3a';
+
   const parts = [];
   for (const { r, c, idx } of cells) {
     const cx = GCX + (c - r) * HW, cy = GCY + (r + c) * HH;
-    const rp = { x: cx + HW, y: cy }, bp = { x: cx, y: cy + HH }, lp = { x: cx - HW, y: cy };
+    const tp = { x: cx, y: cy - HH }, rp = { x: cx + HW, y: cy },
+          bp = { x: cx, y: cy + HH }, lp = { x: cx - HW, y: cy };
     parts.push(
+      // Цветной полигон под изображением — fallback если PNG нет
+      `<polygon points="${tp.x},${tp.y} ${rp.x},${rp.y} ${bp.x},${bp.y} ${lp.x},${lp.y}"
+        fill="${topFill}"/>`,
       `<image href="land/${activeLand}.png"
         x="${cx - HW}" y="${cy - HH}" width="${HW * 2}" height="${HH * 2}"
         clip-path="url(#clip-${idx})"
@@ -785,9 +834,9 @@ shopBtn.addEventListener('click', () => {
   renderShop();
   shopOverlay.classList.add('open');
 });
-shopClose.addEventListener('click', () => shopOverlay.classList.remove('open'));
+shopClose.addEventListener('click', () => { hideShopConfirm(); shopOverlay.classList.remove('open'); });
 shopOverlay.addEventListener('click', e => {
-  if (e.target === shopOverlay) shopOverlay.classList.remove('open');
+  if (e.target === shopOverlay) { hideShopConfirm(); shopOverlay.classList.remove('open'); }
 });
 
 function switchShopTab(tab) {
@@ -800,8 +849,8 @@ function switchShopTab(tab) {
 
 function renderShop() {
   shopCoinDisplay.textContent = state.coins;
+  hideShopConfirm();
 
-  // FIX 5: data-атрибут вместо onclick= в строке
   shopGrid.innerHTML = Object.entries(TREES).map(([key, tree]) => {
     const owned     = state.unlocked.trees.includes(key);
     const canAfford = state.coins >= tree.price;
@@ -810,7 +859,7 @@ function renderShop() {
       ? `<span class="shop-unlocked">Unlocked</span>`
       : `<div class="shop-price"><span>🪙</span>${tree.price}</div>`;
     return `
-      <div class="shop-card ${cls}" data-tree-key="${key}">
+      <div class="shop-card ${cls}" data-tree-key="${key}" data-owned="${owned}" data-can-afford="${canAfford}">
         <div class="shop-img">
           <img src="sprites/${key}-2.png" alt="${tree.name}"
                onerror="this.parentElement.innerHTML='<div class=shop-placeholder></div>'">
@@ -822,11 +871,41 @@ function renderShop() {
       </div>`;
   }).join('');
 
-  shopGrid.addEventListener('click', e => {
+  shopGrid.onclick = e => {
     const card = e.target.closest('[data-tree-key]');
     if (!card) return;
-    buyTree(card.dataset.treeKey);
+    const key       = card.dataset.treeKey;
+    const owned     = card.dataset.owned === 'true';
+    const canAfford = card.dataset.canAfford === 'true';
+    if (owned) return;
+    if (!canAfford) { showToast('🪙 Not enough coins'); return; }
+    showShopConfirm(key);
+  };
+}
+
+function hideShopConfirm() {
+  document.getElementById('shopConfirm').style.display = 'none';
+}
+
+function showShopConfirm(key) {
+  const tree = TREES[key];
+  const confirmEl  = document.getElementById('shopConfirm');
+  const confirmTxt = document.getElementById('shopConfirmText');
+  confirmTxt.innerHTML = `Buy <strong>${tree.name}</strong> for <strong>🪙 ${tree.price}</strong>?`;
+  confirmEl.style.display = 'block';
+
+  const yesBtn = document.getElementById('shopConfirmYes');
+  const noBtn  = document.getElementById('shopConfirmNo');
+  const freshYes = yesBtn.cloneNode(true);
+  const freshNo  = noBtn.cloneNode(true);
+  yesBtn.parentNode.replaceChild(freshYes, yesBtn);
+  noBtn.parentNode.replaceChild(freshNo, noBtn);
+
+  freshYes.addEventListener('click', () => {
+    buyTree(key);
+    hideShopConfirm();
   });
+  freshNo.addEventListener('click', () => hideShopConfirm());
 }
 
 function renderLandShop() {
@@ -864,7 +943,7 @@ function renderLandShop() {
 function buyTree(key) {
   if (state.unlocked.trees.includes(key)) return;
   const tree = TREES[key];
-  if (state.coins < tree.price) { showToast('🪙 Not enough coins'); return; }
+  if (state.coins < tree.price) return; // страховка
   state.coins -= tree.price;
   state.unlocked.trees.push(key);
   saveState();

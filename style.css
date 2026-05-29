@@ -675,7 +675,7 @@ body.dark .card-garden.land-snow {
 .effect-layer {
   position: absolute;
   top: 0; left: 0;
-  width: 100%; height: 70%;
+  width: 100%; height: 100%;
   pointer-events: none;
   overflow: hidden;
   z-index: 0;
@@ -719,10 +719,10 @@ body.dark .snowflake {
   background: rgba(180,210,240,0.55);
 }
 @keyframes snowfall {
-  0%   { transform: translateY(-10px) translateX(0px);   opacity: 0; }
-  10%  { opacity: 1; }
-  90%  { opacity: 0.8; }
-  100% { transform: translateY(105%) translateX(var(--drift)); opacity: 0; }
+  0%   { transform: translateY(-20px) translateX(0px); opacity: 0; }
+  8%   { opacity: 1; }
+  92%  { opacity: 0.85; }
+  100% { transform: translateY(calc(100vh)) translateX(var(--drift)); opacity: 0; }
 }
 
 /* ─── STATISTICS ─── */
