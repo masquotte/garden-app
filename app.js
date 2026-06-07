@@ -67,8 +67,6 @@ function isViewingToday() {
 
 function getViewingGrid() {
   const date = getViewingDate();
-  // Для сегодня — создаём пустой сад в state, если его нет
-  // Для прошлых дат — возвращаем сохранённый сад или пустой массив (не пишем в state)
   if (date === getToday()) return getTodayGrid();
   return state.gardens[date] || Array(GRID_SIZE).fill(null);
 }
@@ -85,8 +83,8 @@ function shiftViewingDate(days) {
   d.setDate(d.getDate() + days);
   const newDate = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   const today = getToday();
-  if (newDate > today) return;                       // не уходим в будущее
-  if (newDate < getEarliestGardenDate()) return;     // не уходим раньше самого первого сада
+  if (newDate > today) return;
+  if (newDate < getEarliestGardenDate()) return;
   viewingDate = (newDate === today) ? null : newDate;
   renderGarden();
 }
@@ -212,7 +210,7 @@ dialSvg.addEventListener('pointerdown', e => {
   isDragging = true;
   dialSvg.setPointerCapture(e.pointerId);
   updateDial(ptrToValue(e.clientX, e.clientY));
-  e.preventDefault(); // FIX: предотвращает scroll на мобильных
+  e.preventDefault();
 });
 dialSvg.addEventListener('pointermove', e => {
   if (isDragging) updateDial(ptrToValue(e.clientX, e.clientY));
@@ -226,9 +224,6 @@ dialTreeBtn.addEventListener('click', () => { openPlantPicker(); });
 /* ════════════════════════════════════════
    ТЕГИ — рендер из единого источника
    ════════════════════════════════════════ */
-// FIX 1: теги рендерятся из TAGS, не из захардкоженного HTML
-// FIX 6: слушатель навешивается один раз через clone-replace (не накапливается),
-//        и сам переключает подсветку — это и был баг "теги на главной не кликаются"
 function renderTagRow(containerId, activeTag, onSelect) {
   const container = document.getElementById(containerId);
   if (!container) return;
@@ -238,14 +233,12 @@ function renderTagRow(containerId, activeTag, onSelect) {
     </button>`
   ).join('');
 
-  // Снимаем все прежние слушатели клонированием узла
   const fresh = container.cloneNode(true);
   container.parentNode.replaceChild(fresh, container);
 
   fresh.addEventListener('click', e => {
     const btn = e.target.closest('[data-tag]');
     if (!btn) return;
-    // Сразу переключаем визуальную подсветку внутри этого контейнера
     fresh.querySelectorAll('.tag-btn').forEach(b =>
       b.classList.toggle('active', b === btn));
     onSelect(btn.dataset.tag);
@@ -267,7 +260,6 @@ function renderRecentPlants() {
   }
   recent = recent.slice(0, 3);
 
-  // FIX 5: data-атрибут вместо onclick= в строке
   container.innerHTML = recent.map(type => {
     const tree = TREES[type];
     if (!tree) return '';
@@ -314,7 +306,6 @@ function closePlantPicker() {
 function renderPickerGrid() {
   const grid = document.getElementById('pickerGrid');
 
-  // FIX 5: data-атрибут вместо onclick= в строке
   grid.innerHTML = Object.entries(TREES).map(([key, tree]) => {
     const owned      = state.unlocked.trees.includes(key);
     const isSelected = key === activePlantType;
@@ -350,7 +341,6 @@ function renderPickerTags() {
   renderTagRow('pickerTagsRow', pickerTag, tag => {
     pickerTag = tag;
     activeTag = tag;
-    // синхронизируем подсветку главной панели тегов без перерендера
     document.querySelectorAll('#mainTagsRow .tag-btn').forEach(b =>
       b.classList.toggle('active', b.dataset.tag === tag));
   });
@@ -387,9 +377,9 @@ let totalSeconds = 0, remainingSeconds = 0;
 let activeTag = 'Work';
 let sessionStartedAt = null;
 let sessionStartDate = null;
-let isRunning = false; // FIX 2: флаг защиты от двойного запуска
+let isRunning = false;
 
-const RING_RADIUS = 78; // единственный источник правды для радиуса кольца
+const RING_RADIUS = 78;
 const CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
 const startBtn     = document.getElementById('startBtn');
@@ -403,27 +393,25 @@ const gardenGrid   = document.getElementById('gardenGrid');
 const sessionCount = document.getElementById('sessionCount');
 const toast        = document.getElementById('toast');
 
-// FIX 1: главная панель тегов рендерится из TAGS
 function initMainTags() {
   renderTagRow('mainTagsRow', activeTag, tag => {
     activeTag = tag;
     pickerTag = tag;
-    // если пикер открыт — синхронизируем подсветку и там
     document.querySelectorAll('#pickerTagsRow .tag-btn').forEach(b =>
       b.classList.toggle('active', b.dataset.tag === tag));
   });
 }
 
 startBtn.addEventListener('click', () => {
-  if (isRunning) return; // FIX 2: защита от двойного запуска
+  if (isRunning) return;
   addToRecentPlants(activePlantType);
   startSession();
 });
 
 function startSession() {
-  if (isRunning) return; // FIX 2: двойная защита
+  if (isRunning) return;
   isRunning = true;
-  startBtn.disabled = true; // FIX 2: блокируем кнопку
+  startBtn.disabled = true;
 
   setStatsCollapsed(true);
   sessionStartedAt = Date.now();
@@ -448,14 +436,13 @@ function startSession() {
 }
 
 cancelBtn.addEventListener('click', () => {
-  endSession(false); // FIX: единая функция завершения
+  endSession(false);
 });
 
-// FIX: единая функция завершения сессии вместо дублирования в cancelBtn и finishSession
 function endSession(completed) {
   clearInterval(timerInterval);
-  isRunning = false;         // FIX 2: сбрасываем флаг
-  startBtn.disabled = false; // FIX 2: разблокируем кнопку
+  isRunning = false;
+  startBtn.disabled = false;
   document.body.classList.remove('running');
 
   const earned = completed ? calcCoins(dialValue) : 0;
@@ -465,8 +452,6 @@ function endSession(completed) {
   recordSession(dialValue, completed, earned);
   saveState();
   renderCoins(completed);
-  // Если юзер во время сессии листал старые сады — возвращаем на сегодня,
-  // чтобы он увидел только что посаженное (или увядшее) дерево
   viewingDate = null;
   renderGarden(idx);
 
@@ -522,7 +507,6 @@ function renderEffect() {
   const land   = LANDS[state.activeLand || 'grass'];
   const effect = land?.effect;
 
-  // Переключаем класс фона на карточке сада
   const cardGarden = document.querySelector('.card-garden');
   if (cardGarden) {
     cardGarden.classList.toggle('land-snow', state.activeLand === 'snow');
@@ -572,7 +556,6 @@ function renderEffect() {
       {s:5,  t:'38%', l:'90%', a:'twinkle1', d:'-3.5s', dur:'5.2s'},
       {s:7,  t:'10%', l:'96%', a:'twinkle2', d:'-9s',   dur:'9.8s'},
     ];
-    // Четырёхконечные SVG-звёздочки тёплого жёлтого цвета
     layer.innerHTML = stars.map(({s, t, l, a, d, dur}) => {
       const h = s / 2;
       const i = s * 0.18;
@@ -619,7 +602,6 @@ function renderEffect() {
     ).join('');
 
     if (type === 'snow-dark') {
-      // Ночью: звёзды + снег
       const stars = [
         {s:5,  t:'8%',  l:'5%',  a:'twinkle1', d:'0s',    dur:'5.2s'},
         {s:7,  t:'28%', l:'14%', a:'twinkle2', d:'-3s',   dur:'8.4s'},
@@ -679,10 +661,8 @@ function buildGardenDefs(cells) {
 
 function buildGardenTiles(cells, grid, activeLand) {
   const HW = 44, HH = 22, D = 11, GCX = 230, GCY = 160;
-  // Цвет боковых граней зависит от типа земли
   const sideR = activeLand === 'snow' ? '#8aafc8' : '#3a6128';
   const sideL = activeLand === 'snow' ? '#6a90a8' : '#2a4a1c';
-  // Цвет верхней грани как fallback (если PNG не загрузится)
   const topFill = activeLand === 'snow' ? '#c8dff0' : '#5a8f3a';
 
   const parts = [];
@@ -691,7 +671,6 @@ function buildGardenTiles(cells, grid, activeLand) {
     const tp = { x: cx, y: cy - HH }, rp = { x: cx + HW, y: cy },
           bp = { x: cx, y: cy + HH }, lp = { x: cx - HW, y: cy };
     parts.push(
-      // Цветной полигон под изображением — fallback если PNG нет
       `<polygon points="${tp.x},${tp.y} ${rp.x},${rp.y} ${bp.x},${bp.y} ${lp.x},${lp.y}"
         fill="${topFill}"/>`,
       `<image href="land/${activeLand}.png"
@@ -736,7 +715,6 @@ function buildGardenSprites(cells, grid, newIdx) {
   }).join('');
 }
 
-// Прозрачные кликабельные ромбы поверх тайлов (для открытия land picker)
 function buildGardenTileClickZones(cells) {
   const HW = 44, HH = 22, GCX = 230, GCY = 160;
   return cells.map(({ r, c }) => {
@@ -799,7 +777,6 @@ function renderGarden(newIdx = -1) {
 
   gardenGrid.innerHTML = svg;
 
-  // Навешиваем обработчик клика на прозрачные зоны тайлов
   if (isViewingToday()) {
     gardenGrid.querySelectorAll('.tile-click-zone').forEach(el => {
       el.addEventListener('click', () => openLandPicker());
@@ -915,7 +892,6 @@ function showShopConfirm(key) {
 function renderLandShop() {
   shopCoinDisplay.textContent = state.coins;
 
-  // FIX 5: data-атрибут вместо onclick= в строке
   shopGrid.innerHTML = Object.entries(LANDS).map(([key, land]) => {
     const owned     = (state.unlocked.lands || []).includes(key);
     const canAfford = state.coins >= land.price;
@@ -947,7 +923,7 @@ function renderLandShop() {
 function buyTree(key) {
   if (state.unlocked.trees.includes(key)) return;
   const tree = TREES[key];
-  if (state.coins < tree.price) return; // страховка
+  if (state.coins < tree.price) return;
   state.coins -= tree.price;
   state.unlocked.trees.push(key);
   saveState();
@@ -1025,7 +1001,6 @@ function renderLandPickerGrid() {
       </div>`;
   }).join('');
 
-  // Один слушатель через делегирование
   const fresh = grid.cloneNode(true);
   grid.parentNode.replaceChild(fresh, grid);
   fresh.addEventListener('click', e => {
@@ -1036,14 +1011,12 @@ function renderLandPickerGrid() {
     const canAfford = card.dataset.canAfford === 'true';
     const isActive  = (state.activeLand || 'grass') === key;
 
-    if (isActive) return; // уже активна — ничего
+    if (isActive) return;
 
     if (owned) {
-      // Просто применяем
       buyLand(key);
       closeLandPicker();
     } else if (canAfford) {
-      // Показываем confirm
       showConfirm(key);
     } else {
       showToast('🪙 Not enough coins');
@@ -1061,7 +1034,6 @@ function showConfirm(key) {
   const yesBtn = document.getElementById('landPickerConfirmYes');
   const noBtn  = document.getElementById('landPickerConfirmNo');
 
-  // Клонируем чтобы убрать старые обработчики
   const freshYes = yesBtn.cloneNode(true);
   const freshNo  = noBtn.cloneNode(true);
   yesBtn.parentNode.replaceChild(freshYes, yesBtn);
@@ -1106,7 +1078,7 @@ document.getElementById('importFile').addEventListener('change', e => {
   reader.onload = ev => {
     try {
       state = migrate(JSON.parse(ev.target.result));
-      viewingDate = null; // сбрасываем просмотр на сегодня
+      viewingDate = null;
       saveState();
       renderCoins();
       renderGarden();
@@ -1165,6 +1137,7 @@ function updateQuote(force = false) {
    СТАТИСТИКА
    ════════════════════════════════════════ */
 let activePeriod = 'day';
+let viewingHeatmapYear = new Date().getFullYear();
 
 function switchStatsPeriod(period) {
   activePeriod = period;
@@ -1270,7 +1243,7 @@ function svgBarChart(buckets) {
   const ticks = [0, niceMax / 2, niceMax];
   const bw = Math.max(2, plotW/n - (n > 15 ? 1 : 2));
   const currentHour = new Date().getHours();
-  const hasData = values.some(v => v > 0); // FIX: проверка наличия данных
+  const hasData = values.some(v => v > 0);
 
   const parts = [`<svg viewBox="0 0 ${W} ${H}" width="100%" xmlns="http://www.w3.org/2000/svg">`];
   ticks.forEach(t => {
@@ -1299,7 +1272,7 @@ function svgBarChart(buckets) {
   return parts.join('');
 }
 
-// FIX 1: TAG_COLORS строится из TAGS, не дублируется
+// TAG_COLORS строится из TAGS, не дублируется
 const TAG_COLORS = Object.fromEntries(TAGS.map(({ tag, color }) => [tag, color]));
 
 function svgDonut(sessions) {
@@ -1372,6 +1345,245 @@ function setStatsCollapsed(val) {
   document.getElementById('statsToggleArrow').style.transform = val ? 'rotate(180deg)' : '';
 }
 
+/* ════════════════════════════════════════
+   HEATMAP (GitHub-style календарь)
+   ════════════════════════════════════════ */
+function getYearsWithData() {
+  const years = new Set();
+  state.sessions.forEach(s => years.add(parseInt(s.date.slice(0, 4))));
+  years.add(new Date().getFullYear()); // текущий год всегда показываем
+  return [...years].sort((a, b) => b - a); // от новых к старым
+}
+
+function setHeatmapYear(year) {
+  viewingHeatmapYear = year;
+  renderStats();
+}
+
+function renderHeatmap() {
+  // Если в выбранном году вдруг нет данных и он не текущий — откатываемся на текущий
+  const availableYears = getYearsWithData();
+  if (!availableYears.includes(viewingHeatmapYear)) {
+    viewingHeatmapYear = new Date().getFullYear();
+  }
+  const year = viewingHeatmapYear;
+  const currentYear = new Date().getFullYear();
+
+  // Границы года: 1 января — 31 декабря
+  const yearStart = new Date(year, 0, 1);
+  const yearEnd   = new Date(year, 11, 31);
+  yearStart.setHours(0, 0, 0, 0);
+  yearEnd.setHours(0, 0, 0, 0);
+
+  // День недели 1 января (0 = Пн)
+  const startDow = yearStart.getDay() === 0 ? 6 : yearStart.getDay() - 1;
+
+  // Стата по дням выбранного года
+  const yearPrefix = String(year);
+  const dayStats = {};
+  state.sessions.forEach(s => {
+    if (!s.date.startsWith(yearPrefix)) return;
+    if (!dayStats[s.date]) dayStats[s.date] = { mins: 0, count: 0, completed: 0 };
+    dayStats[s.date].mins += s.minutes;
+    dayStats[s.date].count++;
+    if (s.completed) dayStats[s.date].completed++;
+  });
+
+  // Пороги интенсивности (квартили по этому году)
+  const allMins = Object.values(dayStats).map(d => d.mins).filter(m => m > 0);
+  let t1 = 15, t2 = 40, t3 = 80;
+  if (allMins.length > 3) {
+    const sorted = [...allMins].sort((a, b) => a - b);
+    t1 = sorted[Math.floor(sorted.length * 0.25)] || 15;
+    t2 = sorted[Math.floor(sorted.length * 0.5)]  || 40;
+    t3 = sorted[Math.floor(sorted.length * 0.75)] || 80;
+  }
+  function getLevel(mins) {
+    if (!mins) return 0;
+    if (mins <= t1) return 1;
+    if (mins <= t2) return 2;
+    if (mins <= t3) return 3;
+    return 4;
+  }
+
+  const todayStr = getToday();
+  const daysInYear = Math.round((yearEnd - yearStart) / 86400000) + 1;
+
+  // Собираем плоский массив ячеек: сначала пустые-добивки до Пн, потом дни года
+  const cells = [];
+  for (let i = 0; i < startDow; i++) cells.push({ empty: true });
+
+  let yearMins = 0, yearSessions = 0;
+  for (let i = 0; i < daysInYear; i++) {
+    const d = new Date(yearStart);
+    d.setDate(yearStart.getDate() + i);
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const isFuture = key > todayStr;
+    const stats = dayStats[key];
+    const level = isFuture ? 0 : getLevel(stats?.mins || 0);
+    cells.push({ key, level, isFuture, stats, date: new Date(d), empty: false });
+    if (!isFuture && stats) {
+      yearMins += stats.mins;
+      yearSessions += stats.count;
+    }
+  }
+
+  // Подписи месяцев — по первому реальному дню каждой колонки
+  const totalWeeks = Math.ceil(cells.length / 7);
+  let monthsHTML = '';
+  let lastMonth = -1;
+  for (let w = 0; w < totalWeeks; w++) {
+    let monthForWeek = -1;
+    let dateForWeek = null;
+    for (let r = 0; r < 7; r++) {
+      const c = cells[w * 7 + r];
+      if (c && !c.empty && c.date) {
+        monthForWeek = c.date.getMonth();
+        dateForWeek = c.date;
+        break;
+      }
+    }
+    if (monthForWeek !== -1 && monthForWeek !== lastMonth) {
+      const name = dateForWeek.toLocaleString('en', { month: 'short' });
+      monthsHTML += `<span style="min-width:14px;">${name}</span>`;
+      lastMonth = monthForWeek;
+    } else {
+      monthsHTML += `<span style="min-width:14px;"></span>`;
+    }
+  }
+
+  // Подписи дней недели
+  const dayLabels = ['Mon', '', 'Wed', '', 'Fri', '', ''];
+  const rowLabelsHTML = dayLabels.map(l =>
+    `<div class="heatmap-row-label">${l}</div>`
+  ).join('');
+
+  // Ячейки сетки
+  const cellsHTML = cells.map(c => {
+    if (c.empty) return `<div class="heatmap-cell heatmap-cell-empty"></div>`;
+    const cls = c.isFuture ? 'future' : (c.level ? `lvl-${c.level}` : '');
+    return `<div class="heatmap-cell ${cls}" data-hm-date="${c.key}" ${c.isFuture ? '' : 'data-hm-clickable'}></div>`;
+  }).join('');
+
+  // Переключатель годов справа
+  const yearsHTML = availableYears.map(y =>
+    `<div class="hm-year-btn ${y === year ? 'active' : ''}" data-hm-year="${y}">${y}</div>`
+  ).join('');
+
+  // Заголовок
+  const yearHours = Math.round(yearMins / 60 * 10) / 10;
+  const titleHTML = `
+    <div class="heatmap-title">
+      <span class="hm-hours">${yearHours}h</span> focused in ${year}
+      <span class="hm-sub">· ${yearSessions} session${yearSessions !== 1 ? 's' : ''}</span>
+    </div>`;
+
+  // Легенда
+  const legendHTML = `
+    <div class="heatmap-legend">
+      <span class="heatmap-legend-label">Less</span>
+      <div class="heatmap-legend-cell" style="background:var(--panel);"></div>
+      <div class="heatmap-legend-cell" style="background:var(--green-dim);"></div>
+      <div class="heatmap-legend-cell" style="background:var(--green);opacity:0.65;"></div>
+      <div class="heatmap-legend-cell" style="background:var(--green);opacity:0.85;"></div>
+      <div class="heatmap-legend-cell" style="background:var(--green);"></div>
+      <span class="heatmap-legend-label">More</span>
+    </div>`;
+
+  return `
+    <div class="stats-section-label">Activity</div>
+    ${titleHTML}
+    <div class="heatmap-container">
+      <div class="heatmap-main">
+        <div class="heatmap-months">${monthsHTML}</div>
+        <div style="display:flex;">
+          <div class="heatmap-row-labels">${rowLabelsHTML}</div>
+          <div class="heatmap-wrap"><div class="heatmap-grid">${cellsHTML}</div></div>
+        </div>
+        ${legendHTML}
+      </div>
+      <div class="hm-year-switcher">${yearsHTML}</div>
+    </div>
+    <div class="heatmap-tooltip" id="heatmapTooltip">
+      <div class="heatmap-tooltip-date" id="hmTipDate"></div>
+      <div class="heatmap-tooltip-stats" id="hmTipStats"></div>
+    </div>`;
+}
+
+function initHeatmapEvents() {
+  const tooltip = document.getElementById('heatmapTooltip');
+  if (!tooltip) return;
+
+  const container = document.getElementById('statsContent');
+
+  // Тултип при наведении
+  container.addEventListener('mouseover', e => {
+    const cell = e.target.closest('[data-hm-date]');
+    if (!cell || cell.classList.contains('future')) { tooltip.classList.remove('visible'); return; }
+
+    const key = cell.dataset.hmDate;
+    const d = new Date(key + 'T00:00:00');
+    const formatted = `${d.getDate()} ${d.toLocaleString('en', { month: 'long' })} ${d.getFullYear()}`;
+
+    // Собираем стату по этому дню
+    let mins = 0, count = 0, completed = 0;
+    state.sessions.forEach(s => {
+      if (s.date !== key) return;
+      mins += s.minutes;
+      count++;
+      if (s.completed) completed++;
+    });
+
+    document.getElementById('hmTipDate').textContent = formatted;
+    if (count > 0) {
+      const pct = Math.round(completed / count * 100);
+      document.getElementById('hmTipStats').innerHTML =
+        `${mins} min · ${count} session${count > 1 ? 's' : ''} · ${pct}% done`;
+    } else {
+      document.getElementById('hmTipStats').textContent = 'No sessions';
+    }
+
+    tooltip.classList.add('visible');
+  });
+
+  // Двигаем тултип за мышкой
+  container.addEventListener('mousemove', e => {
+    if (!tooltip.classList.contains('visible')) return;
+    tooltip.style.left = (e.clientX + 12) + 'px';
+    tooltip.style.top  = (e.clientY - 40) + 'px';
+  });
+
+  container.addEventListener('mouseout', e => {
+    if (e.target.closest('[data-hm-date]')) tooltip.classList.remove('visible');
+  });
+
+  // Клик — переход на этот день в саду / переключение года
+  container.addEventListener('click', e => {
+    // Переключение года в хитмапе
+    const yearBtn = e.target.closest('[data-hm-year]');
+    if (yearBtn) {
+      const y = parseInt(yearBtn.dataset.hmYear);
+      if (y !== viewingHeatmapYear) setHeatmapYear(y);
+      return;
+    }
+
+    // Клик по клетке хитмапа — открыть этот день в саду
+    const cell = e.target.closest('[data-hm-clickable]');
+    if (!cell) return;
+    const key = cell.dataset.hmDate;
+    const todayStr = getToday();
+
+    viewingDate = (key === todayStr) ? null : key;
+    renderGarden();
+
+    // Скроллим к саду
+    document.querySelector('.card-garden').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+}
+
+/* ════════════════════════════════════════
+   RENDER STATS (основная функция)
+   ════════════════════════════════════════ */
 function renderStats() {
   const sessions     = getPeriodSessions(activePeriod);
   const prevSessions = getPrevPeriodSessions(activePeriod);
@@ -1388,7 +1600,7 @@ function renderStats() {
   const avg = daysElapsed > 1 ? Math.round(total/daysElapsed) : total;
 
   const buckets  = getBarBuckets(activePeriod, sessions);
-  const hasData  = buckets.values.some(v => v > 0); // FIX: проверка перед bestIdx
+  const hasData  = buckets.values.some(v => v > 0);
   const bestIdx  = hasData ? buckets.values.indexOf(Math.max(...buckets.values)) : -1;
   const bestVal  = hasData ? buckets.values[bestIdx] : 0;
   const bestLabels = {
@@ -1435,7 +1647,11 @@ function renderStats() {
         <div class="stats-section-label">Favorite Trees</div>
         <div class="fav-trees">${renderFavTrees(sessions)}</div>
       </div>
-    </div>`;
+    </div>
+    ${renderHeatmap()}`;
+
+  // Навешиваем обработчики на хитмап после вставки HTML
+  initHeatmapEvents();
 }
 
 /* ════════════════════════════════════════
