@@ -14,6 +14,7 @@
   <div class="logo">Garden</div>
   <div style="display:flex; align-items:center; gap:10px;">
     <button class="btn-shop" id="shopBtn">🌿 New plants</button>
+    <button class="theme-toggle" id="achBtn" title="Achievements">🏆</button>
     <button class="theme-toggle" id="themeToggle" title="Theme">🌙</button>
     <button class="theme-toggle" id="settingsBtn" title="Settings">⚙️</button>
     <div class="coin-badge" id="coinBadge">
@@ -229,12 +230,41 @@
   </div>
 </div>
 
+<!-- ═══ ACHIEVEMENTS POPUP ═══ -->
+<div class="popup-overlay" id="achOverlay">
+  <div class="popup popup-wide">
+    <div class="popup-header">
+      <div class="logo" style="font-size:1.2rem;">🏆 Achievements</div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="coin-badge" id="achProgressBadge">
+          <span id="achProgress">0 / 20</span>
+        </div>
+        <button class="theme-toggle" id="achClose">✕</button>
+      </div>
+    </div>
+    <hr class="divider">
+    <div id="achGrid"></div>
+  </div>
+</div>
+
+<!-- ═══ ACHIEVEMENT UNLOCK POPUP ═══ -->
+<div class="ach-unlock-popup" id="achUnlockPopup">
+  <div class="ach-unlock-shine"></div>
+  <div class="ach-unlock-label">Achievement unlocked!</div>
+  <div class="ach-unlock-img-wrap">
+    <img id="achUnlockImg" src="" alt="">
+  </div>
+  <div class="ach-unlock-name" id="achUnlockName"></div>
+  <div class="ach-unlock-desc" id="achUnlockDesc"></div>
+</div>
+
 <!-- ═══ TOAST ═══ -->
 <div class="toast" id="toast"></div>
 
 <script src="trees.js"></script>
 <script src="lands.js"></script>
 <script src="quotes.js"></script>
+<script src="achievements.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

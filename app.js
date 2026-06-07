@@ -41,7 +41,8 @@ let state = {
   unlocked: {
     trees: getDefaultUnlocked(),
     lands: getDefaultUnlockedLands()
-  }
+  },
+  achievements: {}
 };
 
 function getTodayGrid() {
@@ -108,7 +109,8 @@ function migrate(saved) {
       gardens: {},
       recentPlants: [],
       activeLand: 'grass',
-      unlocked: { trees: getDefaultUnlocked(), lands: getDefaultUnlockedLands() }
+      unlocked: { trees: getDefaultUnlocked(), lands: getDefaultUnlockedLands() },
+      achievements: {}
     };
   }
   saved.version = STATE_VERSION;
@@ -118,6 +120,7 @@ function migrate(saved) {
   if (!saved.activeLand)    saved.activeLand    = saved.activeSoil || 'grass';
   if (!saved.unlocked)      saved.unlocked      = { trees: getDefaultUnlocked(), lands: getDefaultUnlockedLands() };
   if (!saved.unlocked.lands) saved.unlocked.lands = saved.unlocked.soils || getDefaultUnlockedLands();
+  if (!saved.achievements)  saved.achievements  = {};
   delete saved.activeSoil;
   delete saved.unlocked.soils;
   return saved;
@@ -454,6 +457,7 @@ function endSession(completed) {
   renderCoins(completed);
   viewingDate = null;
   renderGarden(idx);
+  checkAchievements();
 
   if (completed) {
     showToast(`🌳 Tree planted! +${earned} 🍃`);
@@ -1360,6 +1364,94 @@ function setHeatmapYear(year) {
   renderStats();
 }
 
+/* ════════════════════════════════════════
+   HOURS × DAYS-OF-WEEK HEATMAP
+   ════════════════════════════════════════ */
+function renderHoursDowHeatmap(sessions) {
+  // Сетка 7×24: строки — Пн..Вс, колонки — часы 0..23
+  const grid = Array.from({ length: 7 }, () => Array(24).fill(0));
+
+  sessions.forEach(s => {
+    if (!s.startedAt) return;
+    const d = new Date(s.startedAt);
+    const dow = d.getDay() === 0 ? 6 : d.getDay() - 1; // 0=Пн
+    const hour = d.getHours();
+    grid[dow][hour] += s.minutes;
+  });
+
+  const allVals = grid.flat().filter(v => v > 0);
+  if (!allVals.length) {
+    return `
+      <div class="stats-section-label">Weekly Pattern</div>
+      <div class="stats-no-data">No data</div>`;
+  }
+
+  // Пороги интенсивности (квартили)
+  const sorted = [...allVals].sort((a, b) => a - b);
+  const t1 = sorted[Math.floor(sorted.length * 0.25)] || 1;
+  const t2 = sorted[Math.floor(sorted.length * 0.5)]  || t1;
+  const t3 = sorted[Math.floor(sorted.length * 0.75)] || t2;
+
+  function getLevel(mins) {
+    if (!mins) return 0;
+    if (mins <= t1) return 1;
+    if (mins <= t2) return 2;
+    if (mins <= t3) return 3;
+    return 4;
+  }
+
+  const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+  // Заголовок часов: показываем 00, 06, 12, 18 над соответствующими колонками
+  const hourLabelsHTML = Array.from({ length: 24 }, (_, h) =>
+    `<span class="hd-hour-label">${h % 6 === 0 ? String(h).padStart(2,'0') : ''}</span>`
+  ).join('');
+
+  // Строки дней
+  let rowsHTML = '';
+  for (let dow = 0; dow < 7; dow++) {
+    let cellsHTML = '';
+    for (let h = 0; h < 24; h++) {
+      const v = grid[dow][h];
+      const lvl = getLevel(v);
+      const cls = lvl ? `lvl-${lvl}` : '';
+      const tip = v > 0 ? `${dayNames[dow]} ${String(h).padStart(2,'0')}:00 · ${v} min` : '';
+      cellsHTML += `<div class="hd-cell ${cls}" ${tip ? `data-hd-tip="${tip}"` : ''}></div>`;
+    }
+    rowsHTML += `
+      <div class="hd-row">
+        <span class="hd-day-label">${dayNames[dow]}</span>
+        <div class="hd-cells">${cellsHTML}</div>
+      </div>`;
+  }
+
+  // Находим топ-ячейку для подсказки
+  let topVal = 0, topDow = 0, topHour = 0;
+  for (let d = 0; d < 7; d++) {
+    for (let h = 0; h < 24; h++) {
+      if (grid[d][h] > topVal) {
+        topVal = grid[d][h];
+        topDow = d;
+        topHour = h;
+      }
+    }
+  }
+  const topHint = topVal > 0
+    ? `<div class="hd-top-hint">Peak: ${dayNames[topDow]} at ${String(topHour).padStart(2,'0')}:00 · ${topVal} min</div>`
+    : '';
+
+  return `
+    <div class="stats-section-label">Weekly Pattern</div>
+    ${topHint}
+    <div class="hd-heatmap">
+      <div class="hd-row hd-header">
+        <span class="hd-day-label"></span>
+        <div class="hd-cells">${hourLabelsHTML}</div>
+      </div>
+      ${rowsHTML}
+    </div>`;
+}
+
 function renderHeatmap() {
   // Если в выбранном году вдруг нет данных и он не текущий — откатываемся на текущий
   const availableYears = getYearsWithData();
@@ -1518,6 +1610,15 @@ function initHeatmapEvents() {
 
   // Тултип при наведении
   container.addEventListener('mouseover', e => {
+    // Hours × Days heatmap
+    const hdCell = e.target.closest('[data-hd-tip]');
+    if (hdCell) {
+      document.getElementById('hmTipDate').textContent = hdCell.dataset.hdTip;
+      document.getElementById('hmTipStats').textContent = '';
+      tooltip.classList.add('visible');
+      return;
+    }
+
     const cell = e.target.closest('[data-hm-date]');
     if (!cell || cell.classList.contains('future')) { tooltip.classList.remove('visible'); return; }
 
@@ -1554,7 +1655,9 @@ function initHeatmapEvents() {
   });
 
   container.addEventListener('mouseout', e => {
-    if (e.target.closest('[data-hm-date]')) tooltip.classList.remove('visible');
+    if (e.target.closest('[data-hm-date]') || e.target.closest('[data-hd-tip]')) {
+      tooltip.classList.remove('visible');
+    }
   });
 
   // Клик — переход на этот день в саду / переключение года
@@ -1619,6 +1722,19 @@ function renderStats() {
   const sign = diff >= 0 ? '+' : '';
   const pctStr = pct !== null ? ` (${sign}${pct}%)` : '';
 
+  // Новые метрики: completion rate, средняя длительность, самая длинная сессия
+  const sessionCountVal = sessions.length;
+  const completedCount  = sessions.filter(s => s.completed).length;
+  const completionPct   = sessionCountVal ? Math.round(completedCount / sessionCountVal * 100) : 0;
+  const avgDuration     = sessionCountVal ? Math.round(total / sessionCountVal) : 0;
+  const longestSession  = sessionCountVal ? Math.max(...sessions.map(s => s.minutes)) : 0;
+
+  // Цвет completion rate: ≥80% — зелёный, 50–79% — нейтральный, <50% — красный
+  const compClass = !sessionCountVal ? 'neutral'
+                   : completionPct >= 80 ? 'pos'
+                   : completionPct >= 50 ? 'neutral'
+                   : 'neg';
+
   document.getElementById('statsContent').innerHTML = `
     <div class="analytics-row">
       <div class="analytics-card">
@@ -1635,6 +1751,19 @@ function renderStats() {
         <div class="analytics-value">${bestLabel}</div>
         <div class="analytics-sub neutral">${bestVal} min</div>
       </div>` : ''}
+      ${sessionCountVal > 0 ? `<div class="analytics-card">
+        <div class="analytics-label">Completion rate</div>
+        <div class="analytics-value">${completionPct}%</div>
+        <div class="analytics-sub ${compClass}">${completedCount} of ${sessionCountVal} session${sessionCountVal>1?'s':''}</div>
+      </div>` : ''}
+      ${sessionCountVal > 0 ? `<div class="analytics-card">
+        <div class="analytics-label">Avg session</div>
+        <div class="analytics-value">${avgDuration} min</div>
+      </div>` : ''}
+      ${longestSession > 0 ? `<div class="analytics-card">
+        <div class="analytics-label">Longest session</div>
+        <div class="analytics-value">${longestSession} min</div>
+      </div>` : ''}
     </div>
     <div class="stats-section-label">Focused Time Distribution</div>
     <div class="chart-wrap">${svgBarChart(buckets)}</div>
@@ -1648,10 +1777,111 @@ function renderStats() {
         <div class="fav-trees">${renderFavTrees(sessions)}</div>
       </div>
     </div>
+    ${renderHoursDowHeatmap(sessions)}
     ${renderHeatmap()}`;
 
   // Навешиваем обработчики на хитмап после вставки HTML
   initHeatmapEvents();
+}
+
+/* ════════════════════════════════════════
+   ACHIEVEMENTS
+   ════════════════════════════════════════ */
+let achQueue = [];      // Очередь свежеоткрытых достижений для попапа
+let achPopupBusy = false;
+
+function checkAchievements() {
+  if (!state.achievements) state.achievements = {};
+  const newly = [];
+  for (const a of ACHIEVEMENTS) {
+    if (state.achievements[a.id]) continue;
+    try {
+      if (a.check(state.sessions, state)) {
+        state.achievements[a.id] = new Date().toISOString();
+        newly.push(a);
+      }
+    } catch(e) {
+      console.warn('Achievement check failed:', a.id, e);
+    }
+  }
+  if (newly.length) {
+    saveState();
+    achQueue.push(...newly);
+    showNextAchievement();
+  }
+}
+
+function showNextAchievement() {
+  if (achPopupBusy || !achQueue.length) return;
+  const a = achQueue.shift();
+  achPopupBusy = true;
+
+  const popup = document.getElementById('achUnlockPopup');
+  document.getElementById('achUnlockImg').src = `sprites/badges/${a.id}.png`;
+  document.getElementById('achUnlockName').textContent = a.name;
+  document.getElementById('achUnlockDesc').textContent = a.desc;
+  popup.classList.add('show');
+
+  setTimeout(() => {
+    popup.classList.remove('show');
+    achPopupBusy = false;
+    setTimeout(showNextAchievement, 400);
+  }, 4000);
+}
+
+document.getElementById('achUnlockPopup').addEventListener('click', () => {
+  document.getElementById('achUnlockPopup').classList.remove('show');
+  achPopupBusy = false;
+  setTimeout(showNextAchievement, 200);
+});
+
+/* Попап со списком всех достижений */
+const achBtn         = document.getElementById('achBtn');
+const achOverlay     = document.getElementById('achOverlay');
+const achClose       = document.getElementById('achClose');
+const achGrid        = document.getElementById('achGrid');
+const achProgressEl  = document.getElementById('achProgress');
+
+achBtn.addEventListener('click', () => {
+  renderAchGrid();
+  achOverlay.classList.add('open');
+});
+achClose.addEventListener('click', () => achOverlay.classList.remove('open'));
+achOverlay.addEventListener('click', e => {
+  if (e.target === achOverlay) achOverlay.classList.remove('open');
+});
+
+function renderAchGrid() {
+  const unlocked = state.achievements || {};
+  const unlockedCount = Object.keys(unlocked).length;
+  const total = ACHIEVEMENTS.length;
+  achProgressEl.textContent = `${unlockedCount} / ${total}`;
+
+  // Группируем по group
+  const groups = {};
+  for (const a of ACHIEVEMENTS) {
+    if (!groups[a.group]) groups[a.group] = [];
+    groups[a.group].push(a);
+  }
+
+  achGrid.innerHTML = Object.entries(groups).map(([group, items]) => `
+    <div class="ach-group-label">${group}</div>
+    <div class="ach-group">
+      ${items.map(a => {
+        const got = unlocked[a.id];
+        const dateStr = got ? new Date(got).toLocaleDateString('en', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+        return `
+          <div class="ach-card ${got ? 'ach-unlocked' : 'ach-locked'}">
+            <div class="ach-card-img">
+              <img src="sprites/badges/${a.id}.png" alt="${a.name}">
+            </div>
+            <div class="ach-card-name">${a.name}</div>
+            <div class="ach-card-desc">${a.desc}</div>
+            ${got ? `<div class="ach-card-date">${dateStr}</div>` : ''}
+          </div>`;
+      }).join('')}
+    </div>
+  `).join('');
 }
 
 /* ════════════════════════════════════════

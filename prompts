@@ -1,0 +1,18 @@
+ TREE PROMPT SAMPLE for NanoBanana
+ 
+ 3 stages of a [] tree sprite, shown side by side, evolution from young to mature on plain white background, without text on the image, treat them as props, do not add pieces of soil or shadows under the tree. Use attached image for style and mood reference.
+
+Stage 1 — tiny heritage sapling: a small sapling with a slender ivory-stone trunk resembling a miniature museum column with subtle fluting, tiny scrolled capital at the top like a budding Ionic volute, a few small leaves shaped like delicate musical notes (quarter notes and eighth notes) in soft sage-green, one tiny golden treble clef curl peeking out, very compact and charming.
+
+Stage 2 — medium choir tree: a fuller canopy where leaves are clearly shaped as musical notes and small unfurled sheet-music scrolls in cream and sage, the trunk now a proper marble-white classical column with visible fluting and a small carved frieze pattern near the base, a few golden clef ornaments nestled among the foliage, branches arching gently like the curves of a lyre, medium height.
+
+Stage 3 — mature concert tree: a well-rounded lush canopy of musical-note leaves and softly furled sheet-music scrolls in sage-green and ivory, intertwined with delicate golden treble and bass clefs like ornaments, the trunk a stately fluted marble column with a carved classical capital supporting the canopy, a small pediment-like detail at the base hinting at museum architecture, soft glow suggesting concert-hall warmth, compact silhouette, not too wide, fits among other trees naturally.
+
+Consistent isometric-friendly style across all three stages, soft cartoon illustration, palette of warm ivory marble, sage-green foliage, and antique gold accents with just a hint of warmth. 
+
+
+TILE PROMPT SAMPLE for NanoBanana
+
+ Isometric land style tile sprite, seamless repeating texture, perfect diamond/rhombus shape, plain white background, no trees or plants on it, no shadows outside the tile, treat it as a prop. Soft cartoon illustration style, top-down isometric 45° angle. Use attached image for style reference. Smooth white snow surface, subtle blue-grey shadows in the slight dips, crisp clean edges, minimal texture, quiet and still atmosphere.
+
+Isometric land style tile sprite, seamless repeating texture, perfect diamond/rhombus shape, plain white background, no trees or plants on it, no shadows outside the tile, treat it as a prop. Generate exactly ONE single tile only, not a grid, not multiple tiles, not a 5x5 layout. The reference image shows a grid for style purposes only — output a single isolated diamond-shaped tile. Soft cartoon illustration style, top-down isometric 45° angle. Use attached image for style reference. 

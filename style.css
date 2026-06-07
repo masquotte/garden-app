@@ -1123,3 +1123,229 @@ body.dark .snowflake {
   cursor: default !important;
   pointer-events: none;
 }
+
+/* ─── HOURS × DAYS-OF-WEEK HEATMAP ─── */
+.hd-heatmap {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 4px;
+}
+.hd-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.hd-day-label {
+  font-size: 8.5px;
+  font-family: 'DM Mono', monospace;
+  color: var(--muted);
+  width: 24px;
+  flex-shrink: 0;
+  text-align: right;
+}
+.hd-cells {
+  display: grid;
+  grid-template-columns: repeat(24, 1fr);
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+.hd-cell {
+  aspect-ratio: 1;
+  border-radius: 2px;
+  background: var(--panel);
+  transition: outline 0.12s;
+  min-height: 12px;
+}
+.hd-cell[data-hd-tip] {
+  cursor: pointer;
+}
+.hd-cell[data-hd-tip]:hover {
+  outline: 2px solid var(--green-lt);
+  outline-offset: -1px;
+}
+.hd-cell.lvl-1 { background: var(--green-dim); }
+.hd-cell.lvl-2 { background: var(--green); opacity: 0.65; }
+.hd-cell.lvl-3 { background: var(--green); opacity: 0.85; }
+.hd-cell.lvl-4 { background: var(--green); }
+
+.hd-header .hd-day-label { background: transparent; }
+.hd-hour-label {
+  font-size: 8.5px;
+  font-family: 'DM Mono', monospace;
+  color: var(--muted);
+  text-align: center;
+  display: block;
+}
+
+.hd-top-hint {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+/* ─── ACHIEVEMENTS GRID (попап со всеми бейджами) ─── */
+.ach-group-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 16px 0 8px;
+}
+.ach-group-label:first-child {
+  margin-top: 4px;
+}
+.ach-group {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.ach-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 8px 10px;
+  text-align: center;
+  background: var(--panel);
+  transition: transform 0.15s, border-color 0.15s;
+}
+.ach-card.ach-unlocked {
+  border-color: var(--green);
+  background: var(--green-dim);
+}
+.ach-card.ach-unlocked:hover {
+  transform: translateY(-2px);
+}
+.ach-card.ach-locked {
+  opacity: 0.55;
+  filter: grayscale(0.85);
+}
+.ach-card-img {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ach-card-img img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+.ach-card-name {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 2px;
+  font-family: 'Nunito', sans-serif;
+}
+.ach-card-desc {
+  font-size: 0.66rem;
+  color: var(--muted);
+  line-height: 1.35;
+  font-family: 'Nunito', sans-serif;
+}
+.ach-card-date {
+  font-size: 0.62rem;
+  color: var(--green-lt);
+  font-family: 'DM Mono', monospace;
+  margin-top: 4px;
+}
+
+@media (max-width: 600px) {
+  .ach-group { grid-template-columns: repeat(2, 1fr); }
+}
+
+#achProgressBadge {
+  color: var(--green-lt);
+  font-family: 'DM Mono', monospace;
+  font-size: 0.9rem;
+}
+
+/* ─── ACHIEVEMENT UNLOCK CELEBRATION ─── */
+.ach-unlock-popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.7);
+  opacity: 0;
+  pointer-events: none;
+  background: var(--surface);
+  border: 2px solid var(--green);
+  border-radius: var(--radius);
+  padding: 24px 32px 22px;
+  width: 280px;
+  text-align: center;
+  z-index: 300;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.3), 0 0 60px rgba(92,158,97,0.25);
+  transition: transform 0.45s cubic-bezier(0.34,1.56,0.64,1), opacity 0.35s;
+  overflow: hidden;
+}
+.ach-unlock-popup.show {
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 1;
+  pointer-events: auto;
+  cursor: pointer;
+}
+.ach-unlock-shine {
+  position: absolute;
+  inset: -50%;
+  background: radial-gradient(circle at center, rgba(122,190,128,0.25) 0%, transparent 60%);
+  pointer-events: none;
+  animation: ach-pulse 2.5s ease-in-out infinite;
+}
+@keyframes ach-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+.ach-unlock-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--gold-lt);
+  margin-bottom: 14px;
+  position: relative;
+  z-index: 1;
+}
+.ach-unlock-img-wrap {
+  width: 96px;
+  height: 96px;
+  margin: 0 auto 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+}
+.ach-unlock-img-wrap img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  animation: ach-bounce 0.6s ease-out;
+}
+@keyframes ach-bounce {
+  0%   { transform: scale(0) rotate(-12deg); }
+  60%  { transform: scale(1.15) rotate(4deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+.ach-unlock-name {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.4rem;
+  color: var(--green-lt);
+  margin-bottom: 6px;
+  position: relative;
+  z-index: 1;
+}
+.ach-unlock-desc {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.85rem;
+  color: var(--muted);
+  position: relative;
+  z-index: 1;
+}
