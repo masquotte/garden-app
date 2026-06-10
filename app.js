@@ -1817,7 +1817,9 @@ function showNextAchievement() {
   achPopupBusy = true;
 
   const popup = document.getElementById('achUnlockPopup');
-  document.getElementById('achUnlockImg').src = `sprites/badges/${a.id}.png`;
+  const img = document.getElementById('achUnlockImg');
+  img.onerror = null;
+  img.src = `badges/${a.id}.png`;
   document.getElementById('achUnlockName').textContent = a.name;
   document.getElementById('achUnlockDesc').textContent = a.desc;
   popup.classList.add('show');
@@ -1857,31 +1859,22 @@ function renderAchGrid() {
   const total = ACHIEVEMENTS.length;
   achProgressEl.textContent = `${unlockedCount} / ${total}`;
 
-  // Группируем по group
-  const groups = {};
-  for (const a of ACHIEVEMENTS) {
-    if (!groups[a.group]) groups[a.group] = [];
-    groups[a.group].push(a);
-  }
-
-  achGrid.innerHTML = Object.entries(groups).map(([group, items]) => `
-    <div class="ach-group-label">${group}</div>
-    <div class="ach-group">
-      ${items.map(a => {
+  achGrid.innerHTML = `
+    <div class="ach-flat-grid">
+      ${ACHIEVEMENTS.map(a => {
         const got = unlocked[a.id];
         const dateStr = got ? new Date(got).toLocaleDateString('en', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
         return `
           <div class="ach-card ${got ? 'ach-unlocked' : 'ach-locked'}">
             <div class="ach-card-img">
-              <img src="sprites/badges/${a.id}.png" alt="${a.name}">
+              <img src="badges/${a.id}.png" alt="${a.name}">
             </div>
             <div class="ach-card-name">${a.name}</div>
             <div class="ach-card-desc">${a.desc}</div>
             ${got ? `<div class="ach-card-date">${dateStr}</div>` : ''}
           </div>`;
       }).join('')}
-    </div>
-  `).join('');
+    </div>`;
 }
 
 /* ════════════════════════════════════════

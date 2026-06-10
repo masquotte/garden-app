@@ -1187,22 +1187,25 @@ body.dark .snowflake {
 }
 
 /* ─── ACHIEVEMENTS GRID (попап со всеми бейджами) ─── */
-.ach-group-label {
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin: 16px 0 8px;
+#achOverlay .popup {
+  width: 720px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
 }
-.ach-group-label:first-child {
-  margin-top: 4px;
+#achOverlay #achGrid {
+  overflow-y: auto;
+  flex: 1;
+  padding-right: 4px;
+  margin-right: -4px;
 }
-.ach-group {
+
+.ach-flat-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 10px;
-  margin-bottom: 4px;
+  padding: 4px 0 8px;
 }
 .ach-card {
   border: 1px solid var(--border);
@@ -1256,8 +1259,11 @@ body.dark .snowflake {
   margin-top: 4px;
 }
 
-@media (max-width: 600px) {
-  .ach-group { grid-template-columns: repeat(2, 1fr); }
+@media (max-width: 700px) {
+  .ach-flat-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 480px) {
+  .ach-flat-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
 #achProgressBadge {
