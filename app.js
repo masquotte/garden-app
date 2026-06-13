@@ -274,11 +274,11 @@ function renderRecentPlants() {
     </button>`;
   }).join('');
 
-  container.addEventListener('click', e => {
+  container.onclick = e => {
     const btn = e.target.closest('[data-plant]');
     if (!btn) return;
     selectPlant(btn.dataset.plant);
-  });
+  };
 }
 
 function selectPlant(type) {
@@ -323,14 +323,14 @@ function renderPickerGrid() {
       </div>`;
   }).join('');
 
-  grid.addEventListener('click', e => {
+  grid.onclick = e => {
     const card = e.target.closest('[data-plant-key]');
     if (!card) return;
     const key   = card.dataset.plantKey;
     const owned = card.dataset.owned === 'true';
     if (owned) pickerSelectPlant(key);
     else showToast('Buy in shop first');
-  });
+  };
 }
 
 function pickerSelectPlant(type) {
@@ -381,6 +381,7 @@ let activeTag = 'Work';
 let sessionStartedAt = null;
 let sessionStartDate = null;
 let isRunning = false;
+let isPaused = false;
 
 const RING_RADIUS = 78;
 const CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
@@ -438,6 +439,32 @@ function startSession() {
   }, 1000);
 }
 
+const pauseBtn = document.getElementById('pauseBtn');
+
+pauseBtn.addEventListener('click', () => {
+  if (!isRunning) return;
+  if (isPaused) {
+    isPaused = false;
+    pauseBtn.textContent = '⏸ I need a little break';
+    pauseBtn.classList.remove('paused');
+    timerInterval = setInterval(() => {
+      remainingSeconds--;
+      updateCountdown();
+      updateRing();
+      updateQuote();
+      if (remainingSeconds <= 0) {
+        clearInterval(timerInterval);
+        finishSession(dialValue, true);
+      }
+    }, 1000);
+  } else {
+    isPaused = true;
+    clearInterval(timerInterval);
+    pauseBtn.textContent = '▶ Continue';
+    pauseBtn.classList.add('paused');
+  }
+});
+
 cancelBtn.addEventListener('click', () => {
   endSession(false);
 });
@@ -445,6 +472,9 @@ cancelBtn.addEventListener('click', () => {
 function endSession(completed) {
   clearInterval(timerInterval);
   isRunning = false;
+  isPaused = false;
+  pauseBtn.textContent = '⏸ I need a little break';
+  pauseBtn.classList.remove('paused');
   startBtn.disabled = false;
   document.body.classList.remove('running');
 
@@ -504,6 +534,35 @@ function renderCoins(animate = false) {
 /* ════════════════════════════════════════
    AMBIENT EFFECTS
    ════════════════════════════════════════ */
+function buildStarsHTML() {
+  const stars = [
+    {s:5,  t:'8%',  l:'5%',  a:'twinkle1', d:'0s',    dur:'5.2s'},
+    {s:7,  t:'28%', l:'14%', a:'twinkle2', d:'-3s',   dur:'8.4s'},
+    {s:4,  t:'16%', l:'22%', a:'twinkle3', d:'-6s',   dur:'7.2s'},
+    {s:5,  t:'5%',  l:'32%', a:'twinkle1', d:'-1.5s', dur:'6.1s'},
+    {s:7,  t:'22%', l:'44%', a:'twinkle2', d:'-5s',   dur:'9.1s'},
+    {s:4,  t:'35%', l:'36%', a:'twinkle3', d:'-8s',   dur:'6.4s'},
+    {s:5,  t:'12%', l:'58%', a:'twinkle1', d:'-2.5s', dur:'7.4s'},
+    {s:4,  t:'32%', l:'68%', a:'twinkle3', d:'-4s',   dur:'5.8s'},
+    {s:7,  t:'6%',  l:'74%', a:'twinkle2', d:'-7s',   dur:'8.7s'},
+    {s:4,  t:'20%', l:'82%', a:'twinkle3', d:'-0.5s', dur:'6.8s'},
+    {s:5,  t:'38%', l:'90%', a:'twinkle1', d:'-3.5s', dur:'5.2s'},
+    {s:7,  t:'10%', l:'96%', a:'twinkle2', d:'-9s',   dur:'9.8s'},
+  ];
+  return stars.map(({s, t, l, a, d, dur}) => {
+    const h = s / 2, i = s * 0.18;
+    const pts = [
+      `${h},0`, `${h+i},${h-i}`, `${s},${h}`, `${h+i},${h+i}`,
+      `${h},${s}`, `${h-i},${h+i}`, `0,${h}`, `${h-i},${h-i}`
+    ].join(' ');
+    return `<svg style="position:absolute;top:${t};left:${l};width:${s}px;height:${s}px;
+      animation:${a} ${dur} ease-in-out infinite;animation-delay:${d};overflow:visible;"
+      viewBox="0 0 ${s} ${s}" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="${pts}" fill="rgba(255,224,100,0.9)"/>
+    </svg>`;
+  }).join('');
+}
+
 function renderEffect() {
   const layer = document.getElementById('effectLayer');
   if (!layer) return;
@@ -546,33 +605,7 @@ function renderEffect() {
   </div>`;
 
   } else if (type === 'stars') {
-    const stars = [
-      {s:5,  t:'8%',  l:'5%',  a:'twinkle1', d:'0s',    dur:'5.2s'},
-      {s:7,  t:'28%', l:'14%', a:'twinkle2', d:'-3s',   dur:'8.4s'},
-      {s:4,  t:'16%', l:'22%', a:'twinkle3', d:'-6s',   dur:'7.2s'},
-      {s:5,  t:'5%',  l:'32%', a:'twinkle1', d:'-1.5s', dur:'6.1s'},
-      {s:7,  t:'22%', l:'44%', a:'twinkle2', d:'-5s',   dur:'9.1s'},
-      {s:4,  t:'35%', l:'36%', a:'twinkle3', d:'-8s',   dur:'6.4s'},
-      {s:5,  t:'12%', l:'58%', a:'twinkle1', d:'-2.5s', dur:'7.4s'},
-      {s:4,  t:'32%', l:'68%', a:'twinkle3', d:'-4s',   dur:'5.8s'},
-      {s:7,  t:'6%',  l:'74%', a:'twinkle2', d:'-7s',   dur:'8.7s'},
-      {s:4,  t:'20%', l:'82%', a:'twinkle3', d:'-0.5s', dur:'6.8s'},
-      {s:5,  t:'38%', l:'90%', a:'twinkle1', d:'-3.5s', dur:'5.2s'},
-      {s:7,  t:'10%', l:'96%', a:'twinkle2', d:'-9s',   dur:'9.8s'},
-    ];
-    layer.innerHTML = stars.map(({s, t, l, a, d, dur}) => {
-      const h = s / 2;
-      const i = s * 0.18;
-      const pts = [
-        `${h},0`, `${h+i},${h-i}`, `${s},${h}`, `${h+i},${h+i}`,
-        `${h},${s}`, `${h-i},${h+i}`, `0,${h}`, `${h-i},${h-i}`
-      ].join(' ');
-      return `<svg style="position:absolute;top:${t};left:${l};width:${s}px;height:${s}px;
-        animation:${a} ${dur} ease-in-out infinite;animation-delay:${d};overflow:visible;"
-        viewBox="0 0 ${s} ${s}" xmlns="http://www.w3.org/2000/svg">
-        <polygon points="${pts}" fill="rgba(255,224,100,0.9)"/>
-      </svg>`;
-    }).join('');
+    layer.innerHTML = buildStarsHTML();
 
   } else if (type === 'snow' || type === 'snow-dark') {
     const flakes = [
@@ -606,33 +639,7 @@ function renderEffect() {
     ).join('');
 
     if (type === 'snow-dark') {
-      const stars = [
-        {s:5,  t:'8%',  l:'5%',  a:'twinkle1', d:'0s',    dur:'5.2s'},
-        {s:7,  t:'28%', l:'14%', a:'twinkle2', d:'-3s',   dur:'8.4s'},
-        {s:4,  t:'16%', l:'22%', a:'twinkle3', d:'-6s',   dur:'7.2s'},
-        {s:5,  t:'5%',  l:'32%', a:'twinkle1', d:'-1.5s', dur:'6.1s'},
-        {s:7,  t:'22%', l:'44%', a:'twinkle2', d:'-5s',   dur:'9.1s'},
-        {s:4,  t:'35%', l:'36%', a:'twinkle3', d:'-8s',   dur:'6.4s'},
-        {s:5,  t:'12%', l:'58%', a:'twinkle1', d:'-2.5s', dur:'7.4s'},
-        {s:4,  t:'32%', l:'68%', a:'twinkle3', d:'-4s',   dur:'5.8s'},
-        {s:7,  t:'6%',  l:'74%', a:'twinkle2', d:'-7s',   dur:'8.7s'},
-        {s:4,  t:'20%', l:'82%', a:'twinkle3', d:'-0.5s', dur:'6.8s'},
-        {s:5,  t:'38%', l:'90%', a:'twinkle1', d:'-3.5s', dur:'5.2s'},
-        {s:7,  t:'10%', l:'96%', a:'twinkle2', d:'-9s',   dur:'9.8s'},
-      ];
-      const starsHTML = stars.map(({s, t, l, a, d, dur}) => {
-        const h = s / 2, i = s * 0.18;
-        const pts = [
-          `${h},0`, `${h+i},${h-i}`, `${s},${h}`, `${h+i},${h+i}`,
-          `${h},${s}`, `${h-i},${h+i}`, `0,${h}`, `${h-i},${h-i}`
-        ].join(' ');
-        return `<svg style="position:absolute;top:${t};left:${l};width:${s}px;height:${s}px;
-          animation:${a} ${dur} ease-in-out infinite;animation-delay:${d};overflow:visible;"
-          viewBox="0 0 ${s} ${s}" xmlns="http://www.w3.org/2000/svg">
-          <polygon points="${pts}" fill="rgba(255,224,100,0.9)"/>
-        </svg>`;
-      }).join('');
-      layer.innerHTML = starsHTML + snowHTML;
+      layer.innerHTML = buildStarsHTML() + snowHTML;
     } else {
       layer.innerHTML = snowHTML;
     }
@@ -917,11 +924,11 @@ function renderLandShop() {
       </div>`;
   }).join('');
 
-  shopGrid.addEventListener('click', e => {
+  shopGrid.onclick = e => {
     const card = e.target.closest('[data-land-key]');
     if (!card) return;
     buyLand(card.dataset.landKey);
-  });
+  };
 }
 
 function buyTree(key) {
@@ -1602,7 +1609,11 @@ function renderHeatmap() {
     </div>`;
 }
 
+let heatmapEventsReady = false;
+
 function initHeatmapEvents() {
+  if (heatmapEventsReady) return;
+  heatmapEventsReady = true;
   const tooltip = document.getElementById('heatmapTooltip');
   if (!tooltip) return;
 

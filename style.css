@@ -209,6 +209,17 @@ header {
 .btn-start:hover { background: var(--green-lt); transform: translateY(-1px); }
 .btn-start:active { transform: translateY(0); }
 
+.btn-pause {
+  background: rgba(74, 140, 80, 0.15);
+  border: 1px solid rgba(74, 140, 80, 0.35);
+  color: var(--green);
+}
+.btn-pause:hover { background: rgba(74, 140, 80, 0.25); }
+.btn-pause.paused {
+  background: rgba(74, 140, 80, 0.28);
+  border-color: var(--green);
+}
+
 .btn-cancel {
   background: transparent;
   border: 1px solid var(--border);

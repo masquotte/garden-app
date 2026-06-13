@@ -13,6 +13,7 @@ const STEP_MINUTES = 5;
 const TAGS = [
   { tag: 'Work',          emoji: '💼', color: '#4a8c50' },
   { tag: 'Study',         emoji: '📚', color: '#5b9bd5' },
+  { tag: 'Read',          emoji: '📖', color: '#7aafcf' },
   { tag: 'Social',        emoji: '💬', color: '#e8a838' },
   { tag: 'Rest',          emoji: '🛋️', color: '#a07bc4' },
   { tag: 'Entertainment', emoji: '🎮', color: '#e06060' },
