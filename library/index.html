@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Library — Reading Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/library/style.css">
+</head>
+<body>
+
+<div id="effectLayer" class="effect-layer"></div>
+
+<div class="app-wrap">
+
+<!-- ── HEADER ── -->
+<header>
+  <div style="display:flex;align-items:center;gap:14px">
+    <div class="logo">Library</div>
+    <a href="/" class="garden-nav-link">🌳 Garden</a>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <button class="btn-shop" id="addBookBtn">+ Add Book</button>
+    <button class="theme-toggle" id="achBtn" title="Achievements">🏆</button>
+    <button class="theme-toggle" id="bgBtn" title="Background">🌄</button>
+    <button class="theme-toggle" id="themeToggle" title="Theme">🌙</button>
+    <button class="theme-toggle" id="settingsBtn" title="Settings">⚙️</button>
+    <div class="coin-badge" id="bookBadge">
+      <span>📖</span>
+      <span id="bookCountDisplay">0</span>
+    </div>
+  </div>
+</header>
+
+<div class="content-row">
+
+  <!-- ── SESSION CARD (left) ── -->
+  <div class="card card-session">
+
+    <!-- SETUP STATE -->
+    <div class="state-setup">
+      <svg id="bookDialSvg" class="book-dial-svg" viewBox="0 0 200 200" width="200" height="200" onclick="onDialClick()">
+        <defs>
+          <clipPath id="dialClip"><circle cx="100" cy="100" r="58"/></clipPath>
+        </defs>
+        <circle class="dial-track" cx="100" cy="100" r="78" fill="none" stroke-width="9"/>
+        <circle id="dialProgressArc" class="dial-arc" cx="100" cy="100" r="78"
+          fill="none" stroke-width="9"
+          stroke-dasharray="490" stroke-dashoffset="490"
+          transform="rotate(-90,100,100)" stroke-linecap="round"/>
+        <circle cx="100" cy="100" r="62" fill="var(--panel)"/>
+        <image id="dialCoverImg" href="" x="42" y="30" width="116" height="140"
+          clip-path="url(#dialClip)" preserveAspectRatio="xMidYMid slice" style="display:none"/>
+        <text id="dialEmoji" x="100" y="114" text-anchor="middle" font-size="40" style="cursor:pointer">📖</text>
+        <text id="dialPct" x="100" y="188" text-anchor="middle" font-size="10"
+          font-family="Nunito,sans-serif" fill="var(--blue)"></text>
+      </svg>
+      <div class="dial-title" id="dialTitle">choose a book</div>
+
+      <hr class="divider">
+      <div class="section-label">Currently reading</div>
+      <div id="recentBooks" class="recent-books"></div>
+
+      <div class="session-row">
+        <div class="section-label" style="margin:0">Duration</div>
+        <div class="time-stepper">
+          <button class="time-btn" id="timeDown">−</button>
+          <span id="sessionTimeVal">25 min</span>
+          <button class="time-btn" id="timeUp">+</button>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-start" id="startBtn">📖 Start Reading</button>
+      </div>
+    </div>
+
+    <!-- RUNNING STATE -->
+    <div class="state-running">
+      <div class="ring-wrap">
+        <svg class="ring-svg" width="180" height="180" viewBox="0 0 180 180">
+          <circle class="ring-bg" cx="90" cy="90" r="75" fill="none" stroke-width="9"/>
+          <circle id="ringProgress" class="ring-progress" cx="90" cy="90" r="75"
+            fill="none" stroke-width="9"
+            stroke-dasharray="471" stroke-dashoffset="0"
+            transform="rotate(-90,90,90)" stroke-linecap="round"/>
+        </svg>
+        <div class="ring-inner">
+          <div class="countdown" id="countdown">0:00</div>
+          <div class="ring-book-title" id="runningBookTitle"></div>
+        </div>
+      </div>
+      <div class="btn-row" style="flex-direction:column;gap:8px">
+        <button class="btn btn-pause" id="pauseBtn">⏸ Take a break</button>
+        <button class="btn btn-cancel" id="stopBtn">■ End session</button>
+      </div>
+    </div>
+
+  </div><!-- /card-session -->
+
+  <!-- ── SHELF CARD (right) ── -->
+  <div class="card card-shelf">
+    <div class="shelf-header">
+      <div class="section-label" style="margin:0">Your Library</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span id="shelfSubtitle" class="shelf-subtitle"></span>
+        <button class="btn-all-books" id="allBooksBtn">All books →</button>
+      </div>
+    </div>
+    <div id="shelfGrid"></div>
+  </div>
+
+</div><!-- /content-row -->
+
+<!-- ── STATS SECTION ── -->
+<div class="stats-section-wrap">
+  <div class="card card-stats">
+    <div class="stats-header-row">
+      <div onclick="toggleStats()" style="cursor:pointer;display:flex;align-items:center;gap:10px;padding:4px 0">
+        <div class="section-label" style="margin:0">📊 Statistics</div>
+        <span id="statsToggleArrow" style="font-size:0.75rem;color:var(--muted);transition:transform 0.3s">▲</span>
+      </div>
+      <div id="statsStreak" class="stats-streak"></div>
+    </div>
+    <div class="stats-collapsible" id="statsCollapsible">
+      <div class="stats-tabs">
+        <button class="stats-tab active" data-period="week"  onclick="switchStatsPeriod('week')">Week</button>
+        <button class="stats-tab"        data-period="month" onclick="switchStatsPeriod('month')">Month</button>
+        <button class="stats-tab"        data-period="year"  onclick="switchStatsPeriod('year')">Year</button>
+        <button class="stats-tab"        data-period="all"   onclick="switchStatsPeriod('all')">All time</button>
+      </div>
+      <div id="statsContent" class="stats-content"></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /app-wrap -->
+
+
+<!-- ── POPUP: ALL BOOKS ── -->
+<div class="overlay-popup hidden" id="libListOverlay">
+  <div class="popup-card popup-wide">
+    <div class="popup-header">
+      <span class="popup-title">All Books</span>
+      <button class="theme-toggle" id="libListClose">✕</button>
+    </div>
+    <div class="lib-list-toolbar">
+      <div class="shop-tabs" id="libFilterTabs">
+        <button class="shop-tab active" data-status="all">All</button>
+        <button class="shop-tab" data-status="reading">Reading</button>
+        <button class="shop-tab" data-status="want">Want</button>
+        <button class="shop-tab" data-status="finished">Finished</button>
+      </div>
+      <input class="lib-search" id="libSearch" type="search" placeholder="Search…">
+    </div>
+    <div id="libListContent" class="lib-list-content"></div>
+  </div>
+</div>
+
+<!-- ── POPUP: BOOK DETAIL ── -->
+<div class="overlay-popup hidden" id="bookDetailOverlay">
+  <div class="popup-card popup-wide">
+    <div class="popup-header" style="justify-content:flex-end">
+      <button class="btn-sm btn-blue" id="detailEditBtn">✏️ Edit</button>
+      <button class="theme-toggle" id="bookDetailClose">✕</button>
+    </div>
+    <div id="bookDetailContent"></div>
+  </div>
+</div>
+
+<!-- ── POPUP: ADD / EDIT BOOK ── -->
+<div class="overlay-popup hidden" id="addBookOverlay">
+  <div class="popup-card">
+    <div class="popup-header">
+      <span class="popup-title" id="addBookTitle">Add Book</span>
+      <button class="theme-toggle" id="addBookClose">✕</button>
+    </div>
+    <form id="bookForm">
+      <div class="cover-upload-row">
+        <div class="cover-preview" id="coverPreview">
+          <span id="coverPreviewEmoji">📷</span>
+          <img id="coverPreviewImg" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:6px" alt="cover">
+        </div>
+        <div class="cover-inputs">
+          <label class="btn btn-muted" style="cursor:pointer;display:inline-block;margin-bottom:8px">
+            Upload image
+            <input type="file" id="coverFileInput" accept="image/*" style="display:none">
+          </label>
+          <div style="font-size:0.75rem;color:var(--muted);margin-bottom:6px">or paste URL</div>
+          <input class="form-input" name="cover_url" id="coverUrlInput" type="url" placeholder="https://…">
+        </div>
+      </div>
+      <label class="form-label">Title *<input class="form-input" name="title" required placeholder="Book title"></label>
+      <label class="form-label">Author<input class="form-input" name="author" placeholder="Author name"></label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <label class="form-label">Total pages *<input class="form-input" name="total_pages" type="number" min="1" required placeholder="e.g. 320"></label>
+        <label class="form-label">Genre<input class="form-input" name="genre" placeholder="Fiction, History…"></label>
+      </div>
+      <label class="form-label">Status
+        <select class="form-input" name="status" id="bookStatusSelect">
+          <option value="want">Want to read</option>
+          <option value="reading">Currently reading</option>
+          <option value="finished">Finished</option>
+        </select>
+      </label>
+      <label class="form-label" id="currentPageRow" style="display:none">Current page
+        <input class="form-input" name="current_page" id="currentPageInput" type="number" min="0" placeholder="0">
+      </label>
+      <div class="popup-actions">
+        <button type="button" class="btn btn-muted" id="addBookCancel">Cancel</button>
+        <button type="submit" class="btn btn-start">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ── POPUP: STOP SESSION ── -->
+<div class="overlay-popup hidden" id="stopOverlay">
+  <div class="popup-card" style="max-width:340px">
+    <div class="popup-header">
+      <span class="popup-title">Session ended</span>
+    </div>
+    <div id="stopSummary" class="stop-summary"></div>
+    <label class="form-label" style="margin-top:12px">What page did you reach?
+      <input class="form-input" type="number" id="stopPageInput" min="0" placeholder="Page number">
+    </label>
+    <div class="popup-actions">
+      <button class="btn btn-muted" id="stopDiscard">Discard</button>
+      <button class="btn btn-start" id="stopSave">Save session</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── POPUP: SETTINGS ── -->
+<div class="overlay-popup hidden" id="settingsOverlay">
+  <div class="popup-card" style="max-width:360px">
+    <div class="popup-header">
+      <span class="popup-title">Settings</span>
+      <button class="theme-toggle" id="settingsClose">✕</button>
+    </div>
+    <div style="margin-top:8px">
+      <div class="section-label">Data</div>
+      <div class="popup-actions" style="margin-top:8px">
+        <button class="btn btn-muted" id="exportBtn">⬇ Export JSON</button>
+        <label class="btn btn-muted" style="cursor:pointer">
+          ⬆ Import JSON
+          <input type="file" id="importInput" accept=".json" style="display:none">
+        </label>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── POPUP: ACHIEVEMENTS ── -->
+<div class="overlay-popup hidden" id="achListOverlay">
+  <div class="popup-card" style="max-width:420px">
+    <div class="popup-header">
+      <span class="popup-title">Achievements</span>
+      <button class="theme-toggle" id="achListClose">✕</button>
+    </div>
+    <div id="achListContent" class="ach-list-grid"></div>
+  </div>
+</div>
+
+<!-- ── POPUP: CONFIRM ── -->
+<div class="overlay-popup hidden" id="confirmOverlay">
+  <div class="popup-card" style="max-width:320px">
+    <div class="popup-header"><span class="popup-title" id="confirmTitle">Confirm</span></div>
+    <p id="confirmMsg" style="color:var(--muted);font-size:0.9rem;padding:0 2px 16px"></p>
+    <div class="popup-actions">
+      <button class="btn btn-muted" id="confirmNo">Cancel</button>
+      <button class="btn btn-cancel" id="confirmYes">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast hidden" id="toast"></div>
+
+<!-- ACHIEVEMENT CELEBRATION -->
+<div class="ach-celebrate hidden" id="achCelebrate">
+  <div class="ach-celebrate-shine"></div>
+  <div class="ach-celebrate-label">Achievement unlocked!</div>
+  <div class="ach-celebrate-emoji" id="achCelebEmoji"></div>
+  <div class="ach-celebrate-name" id="achCelebName"></div>
+</div>
+
+<!-- ── POPUP: BACKGROUND PICKER ── -->
+<div class="overlay-popup hidden" id="landOverlay">
+  <div class="popup-card" style="max-width:360px">
+    <div class="popup-header">
+      <span class="popup-title">Background</span>
+      <button class="theme-toggle" id="landClose">✕</button>
+    </div>
+    <div id="landGrid" class="land-picker-grid"></div>
+  </div>
+</div>
+
+<script src="/lands.js"></script>
+<script src="/library/app.js"></script>
+</body>
+</html>

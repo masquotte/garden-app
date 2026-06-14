@@ -588,6 +588,18 @@ body.dark .card-garden.land-snow {
 }
 .btn-shop:hover { background: var(--green); color: #0f1410; transform: translateY(-1px); }
 
+.lib-nav-link {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-decoration: none;
+  opacity: 0.7;
+  letter-spacing: 0.02em;
+  transition: opacity 0.18s;
+}
+.lib-nav-link:hover { opacity: 1; }
+
 .shop-tabs {
   display: flex;
   gap: 6px;
