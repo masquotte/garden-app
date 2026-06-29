@@ -35,6 +35,7 @@ const TREES = {
   whitelilac: { name: "White Lilac",    price: 700,  stages: 3, default: false },
   maidens:    { name: "Maiden's Blush", price: 900,  stages: 3, default: false },
   madamerose: { name: "Madame Rose",    price: 1100, stages: 3, default: false },
+  musejserbijeconcert: { name: "Musej Serbije Concert", price: 300, stages: 3, default: false },
 };
 
 function getDefaultUnlocked() {
